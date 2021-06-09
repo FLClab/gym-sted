@@ -4,7 +4,7 @@ import numpy
 from pysted import base, utils
 from pysted.microscopes import DyMINMicroscope
 
-class DatamapGenerator():
+class MoleculesGenerator():
     """
     Generate a datamap with randomly located molecules.
 
@@ -23,6 +23,14 @@ class DatamapGenerator():
         self.molecules = molecules
         self.shape_sources = shape_sources
         self.random_state = random_state
+
+    def __call__(self):
+        """
+        Implements the `call` method of the class.
+
+        :returns : A `numpy.ndarray` containing the randomly placed molecules and positions
+        """
+        return self.generate()
 
     def generate(self):
         """
@@ -100,14 +108,18 @@ class MicroscopeGenerator():
             "whole_datamap" : self.molecules_disposition,
             "datamap_pixelsize" : self.pixelsize
         })
-        imaging_params = kwargs.get("imaging", {
-            "pdt" : 100e-6,
-            "p_ex" : 2e-6,
-            "p_sted" : 0.
-        })
 
         i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
         datamap = base.Datamap(**datamap_params)
         datamap.set_roi(i_ex, "max")
 
-        return datamap, imaging_params
+        return datamap
+
+    def generate_params(self, **kwargs):
+
+        imaging_params = kwargs.get("imaging", {
+            "pdt" : 100e-6,
+            "p_ex" : 2e-6,
+            "p_sted" : 0.
+        })
+        return imaging_params
