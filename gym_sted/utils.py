@@ -1,8 +1,20 @@
 
 import numpy
 
+from skimage import filters
+
 from pysted import base, utils
 from pysted.microscopes import DyMINMicroscope
+
+def get_foreground(img):
+    """Return a background mask of the given image using the OTSU method to threshold.
+
+    :param 2d-array img: The image.
+
+    :returns: A mask (2d array of bool: True on foreground, False on background).
+    """
+    val = filters.threshold_otsu(img)
+    return img > val
 
 class MoleculesGenerator():
     """

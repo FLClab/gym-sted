@@ -7,10 +7,9 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 from matplotlib import pyplot
 
-from gym_sted.utils import MoleculesGenerator, MicroscopeGenerator
+from gym_sted.utils import MoleculesGenerator, MicroscopeGenerator, get_foreground
 
 from pysted.utils import Experiment
-from banditopt.utils import get_foreground
 
 class STEDEnv(gym.Env):
     """
@@ -83,7 +82,7 @@ class STEDEnv(gym.Env):
 
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
-        done = numpy.sum(self.state.whole_datamap) < 0.5 * self.initial_count
+        done = True
         info = {
             "datamap" : in_datamap,
             "bleached" : history["bleached"],
