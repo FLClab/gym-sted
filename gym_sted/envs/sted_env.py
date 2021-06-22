@@ -9,7 +9,6 @@ from matplotlib import pyplot
 
 from gym_sted.utils import MoleculesGenerator, MicroscopeGenerator, get_foreground
 
-from pysted.utils import Experiment
 
 class STEDEnv(gym.Env):
     """
@@ -51,24 +50,17 @@ class STEDEnv(gym.Env):
         )
         conf_params = self.microscope_generator.generate_params()
 
-        # Creates the Experiment
-        # By using the same datamap we ensure that it is shared
-        experiment = Experiment()
-        experiment.add("STED", self.microscope, self.state, sted_params)
-        experiment.add("conf", self.microscope, self.state, conf_params)
+        # Acquire confocal image
+        conf1, bleached, _ = self.microscope.get_signal_and_bleach(self.state, self.state.pixelsize, **conf_params,
+                                                                 bleach=False)
+
+        # Acquire STED image
+        sted_image, bleached, _ = self.microscope.get_signal_and_bleach(self.state, self.state.pixelsize, **sted_params,
+                                                                        bleach=True)
 
         # Acquire confocal image
-        name, history = experiment.acquire("conf", 1, bleach=False)
-        conf1 = history["acquisition"][-1]
-        in_datamap = history["datamap"]
-
-        # Acquire DyMIN image
-        name, history = experiment.acquire("STED", 1, bleach=True)
-        sted_image = history["acquisition"][-1]
-
-        # Acquire confocal image
-        name, history = experiment.acquire("conf", 1, bleach=False)
-        conf2 = history["acquisition"][-1]
+        conf2, bleached, _ = self.microscope.get_signal_and_bleach(self.state, self.state.pixelsize, **conf_params,
+                                                                   bleach=False)
 
         # foreground on confocal image
         fg_c = get_foreground(conf1)
@@ -84,8 +76,7 @@ class STEDEnv(gym.Env):
 
         done = True
         info = {
-            "datamap" : in_datamap,
-            "bleached" : history["bleached"],
+            "bleached" : bleached,
             "sted_image" : sted_image,
             "conf1" : conf1,
             "conf2" : conf2,

@@ -4,7 +4,6 @@ import numpy
 from skimage import filters
 
 from pysted import base, utils
-from pysted.microscopes import DyMINMicroscope
 
 def get_foreground(img):
     """Return a background mask of the given image using the OTSU method to threshold.
