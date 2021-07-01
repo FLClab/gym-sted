@@ -24,7 +24,7 @@ class RewardCalculator:
         :returns : A `list` of rewards
         """
         return [
-            self.objectives[obj_name].evaluate([sted_image], conf1, conf2, fg_s, fg_c), obj_name)
+            self.objectives[obj_name].evaluate([sted_image], conf1, conf2, fg_s, fg_c)
             for obj_name in self.objectives.keys()
         ]
 
@@ -66,4 +66,4 @@ class BoundedRewardCalculator:
 
         :returns : A `bool` whether the value is within the bounds
         """
-        return self.bounds[obj_name]["min"] <= value <= self.bounds[obj_name]["max"]
+        return self.bounds[obj_name]["min"] < value < self.bounds[obj_name]["max"]

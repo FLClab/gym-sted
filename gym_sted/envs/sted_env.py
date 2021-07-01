@@ -6,9 +6,22 @@ import random
 from gym import error, spaces, utils
 from gym.utils import seeding
 from matplotlib import pyplot
+from collections import OrderedDict
 
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
+from gym_sted.rewards import BoundedRewardCalculator, RewardCalculator, objectives
 
+obj_dict = {
+    "SNR" : objectives.Signal_Ratio(75),
+    "Bleach" : objectives.Bleach(),
+    "Resolution" : objectives.Resolution(pixelsize=20e-9),
+    "Squirrel" : objectives.Squirrel()
+}
+bounds_dict = {
+    "SNR" : {"min" : 0.20, "max" : numpy.inf},
+    "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
+    "Resolution" : {"min" : 0, "max" : 80}
+}
 
 class STEDEnv(gym.Env):
     """
@@ -17,6 +30,7 @@ class STEDEnv(gym.Env):
     The `STEDEnv` implements a scan of the entire field of view
     """
     metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self):
 
@@ -24,18 +38,29 @@ class STEDEnv(gym.Env):
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
-        self.action_space = spaces.Box(low=5e-6, high=5e-3, shape=(1,))
-        self.observation_space = spaces.Box(0, 10000, shape=(64, 64, 1), dtype=numpy.uint16)
+        self.action_space = spaces.Box(low=5e-6, high=5e-3, shape=(1,), dtype=numpy.float32)
+        self.observation_space = spaces.Box(0, 255, shape=(64, 64, 1), dtype=numpy.uint8)
 
         self.state = None
         self.initial_count = None
-        self.reward_calculator = None
+
+        objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
+        bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
+        self.reward_calculator = BoundedRewardCalculator(objs, bounds)
+        # self._reward_calculator = RewardCalculator(objs)
+
         self.datamap = None
         self.viewer = None
 
         self.seed()
 
     def step(self, action):
+
+        # We manually rescale and clip the actions which are out of action space
+        m, M = -5, 5
+        action = (action - m) / (M - m)
+        action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
@@ -73,6 +98,8 @@ class STEDEnv(gym.Env):
         fg_s *= fg_c
 
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        # print(self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c))
+        # print(reward)
 
         done = True
         observation = conf2[..., numpy.newaxis]

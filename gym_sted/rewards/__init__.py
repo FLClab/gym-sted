@@ -1,2 +1,2 @@
 
-from .rewards import RewardCalculator
+from .rewards import RewardCalculator, BoundedRewardCalculator

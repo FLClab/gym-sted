@@ -26,5 +26,5 @@ pip install -e .
 
 We will use the `baselines` library to run the experiments.
 ```bash
-python -m baselines.run --alg=ppo2 --env=gym_sted:STED-v0 --network=cnn --num_timesteps=0
+python -m baselines.run --alg=ppo2 --env=gym_sted:STED-v0 --network=cnn --num_timesteps=1e4 --log_path=./tmp --save-path=./tmpsave
 ```
