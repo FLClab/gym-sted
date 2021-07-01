@@ -7,7 +7,7 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 from matplotlib import pyplot
 
-from gym_sted.utils import MoleculesGenerator, MicroscopeGenerator, get_foreground
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
 
 
 class STEDEnv(gym.Env):
@@ -20,12 +20,7 @@ class STEDEnv(gym.Env):
 
     def __init__(self):
 
-        self.molecules_generator = MoleculesGenerator(
-            shape = (50, 50),
-            sources = 10,
-            molecules = 3,
-            shape_sources = (2, 2)
-        )
+        self.synapse_generator = SynapseGenerator()
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
@@ -34,13 +29,14 @@ class STEDEnv(gym.Env):
         self.state = None
         self.initial_count = None
         self.reward_calculator = None
+        self.datamap = None
         self.viewer = None
 
         self.seed()
 
     def step(self, action):
 
-        # Generates the datamap and imaging parameters
+        # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
             imaging = {
                 "pdt" : 100.0e-6,
@@ -51,16 +47,19 @@ class STEDEnv(gym.Env):
         conf_params = self.microscope_generator.generate_params()
 
         # Acquire confocal image
-        conf1, bleached, _ = self.microscope.get_signal_and_bleach(self.state, self.state.pixelsize, **conf_params,
-                                                                 bleach=False)
+        conf1, bleached, _ = self.microscope.get_signal_and_bleach(
+            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
+        )
 
         # Acquire STED image
-        sted_image, bleached, _ = self.microscope.get_signal_and_bleach(self.state, self.state.pixelsize, **sted_params,
-                                                                        bleach=True)
+        sted_image, bleached, _ = self.microscope.get_signal_and_bleach(
+            self.datamap, self.datamap.pixelsize, **sted_params, bleach=True
+        )
 
         # Acquire confocal image
-        conf2, bleached, _ = self.microscope.get_signal_and_bleach(self.state, self.state.pixelsize, **conf_params,
-                                                                   bleach=False)
+        conf2, bleached, _ = self.microscope.get_signal_and_bleach(
+            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
+        )
 
         # foreground on confocal image
         fg_c = get_foreground(conf1)
@@ -75,6 +74,7 @@ class STEDEnv(gym.Env):
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         done = True
+        observation = conf2
         info = {
             "bleached" : bleached,
             "sted_image" : sted_image,
@@ -83,7 +83,6 @@ class STEDEnv(gym.Env):
             "fg_c" : fg_c,
             "fg_s" : fg_s
         }
-        observation = self.state
 
         return observation, reward, done, info
 
@@ -93,13 +92,20 @@ class STEDEnv(gym.Env):
 
         :returns : A `numpy.ndarray` of the molecules
         """
-        molecules_disposition, positions = self.molecules_generator()
-        self.state = self.microscope_generator.generate_datamap(
+        molecules_disposition = self.synapse_generator()
+        self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
                 "whole_datamap" : molecules_disposition,
                 "datamap_pixelsize" : self.microscope_generator.pixelsize
             }
         )
+
+        # Acquire confocal image which sets the current state
+        conf_params = self.microscope_generator.generate_params()
+        self.state, _, _ = self.microscope.get_signal_and_bleach(
+            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
+        )
+
         self.initial_count = molecules_disposition.sum()
         return self.state
 
@@ -112,10 +118,10 @@ class STEDEnv(gym.Env):
         """
         fig, axes = pyplot.subplots(1, 3, figsize=(10,3), sharey=True, sharex=True)
 
-        axes[0].imshow(info["datamap"][-1])
+        axes[0].imshow(info["conf1"])
         axes[0].set_title(f"Datamap roi")
 
-        axes[1].imshow(info["bleached"][-1], vmin=0, vmax=info["datamap"][-1].max())
+        axes[1].imshow(info["bleached"]["base"][self.datamap.roi])
         axes[1].set_title(f"Bleached datamap")
 
         axes[2].imshow(info["sted_image"])
