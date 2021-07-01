@@ -54,7 +54,7 @@ if __name__ == '__main__':
     objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in obj_names})
     bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in obj_names})
     env.update_(
-        reward_calculator=RewardCalculator(objs, bounds)
+        reward_calculator=RewardCalculator(objs)
     )
 
     episode_count = 2

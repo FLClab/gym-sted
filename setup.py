@@ -3,5 +3,5 @@ from setuptools import setup
 
 setup(name='gym_sted',
       version='0.0.1',
-      install_requires=['gym']  # And any other dependencies foo needs
+      install_requires=['gym==0.14']  # And any other dependencies foo needs
 )

@@ -25,6 +25,7 @@ class STEDEnv(gym.Env):
         self.microscope = self.microscope_generator.generate_microscope()
 
         self.action_space = spaces.Box(low=5e-6, high=5e-3, shape=(1,))
+        self.observation_space = spaces.Box(0, 10000, shape=(64, 64, 1), dtype=numpy.uint16)
 
         self.state = None
         self.initial_count = None
@@ -74,7 +75,7 @@ class STEDEnv(gym.Env):
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         done = True
-        observation = conf2
+        observation = conf2[..., numpy.newaxis]
         info = {
             "bleached" : bleached,
             "sted_image" : sted_image,
@@ -107,7 +108,7 @@ class STEDEnv(gym.Env):
         )
 
         self.initial_count = molecules_disposition.sum()
-        return self.state
+        return self.state[..., numpy.newaxis]
 
     def render(self, info, mode='human'):
         """
