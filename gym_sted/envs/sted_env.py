@@ -34,7 +34,7 @@ class STEDEnv(gym.Env):
 
     def __init__(self):
 
-        self.synapse_generator = SynapseGenerator()
+        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
