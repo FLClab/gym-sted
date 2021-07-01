@@ -30,3 +30,6 @@ python -m baselines.run --alg=ppo2 --env=gym_sted:STED-v0 --network=cnn --num_ti
 ```
 
 In this example I run a debug experiment
+```bash
+python -m baselines.run --alg=ppo2 --env=gym_sted:STEDdebug-v0 --network=mlp --num_timesteps=1e6 --log_path=./tmp --save_path=./tmpsave
+```
