@@ -39,7 +39,7 @@ class STEDEnv(gym.Env):
         self.microscope = self.microscope_generator.generate_microscope()
 
         self.action_space = spaces.Box(low=5e-6, high=5e-3, shape=(1,), dtype=numpy.float32)
-        self.observation_space = spaces.Box(0, 255, shape=(64, 64, 1), dtype=numpy.uint8)
+        self.observation_space = spaces.Box(0, 255, shape=(1, 64, 64), dtype=numpy.uint8)
 
         self.state = None
         self.initial_count = None
@@ -102,7 +102,7 @@ class STEDEnv(gym.Env):
         # print(reward)
 
         done = True
-        observation = conf2[..., numpy.newaxis]
+        observation = conf2[numpy.newaxis, ...]
         info = {
             "bleached" : bleached,
             "sted_image" : sted_image,
@@ -135,7 +135,7 @@ class STEDEnv(gym.Env):
         )
 
         self.initial_count = molecules_disposition.sum()
-        return self.state[..., numpy.newaxis]
+        return self.state[numpy.newaxis, ...]
 
     def render(self, info, mode='human'):
         """
@@ -178,8 +178,8 @@ class DebugSTEDEnv(gym.Env):
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
-        self.action_space = spaces.Box(low=0., high=1., shape=(1,), dtype=numpy.float32)
-        self.observation_space = spaces.Box(0, 255, shape=(100,), dtype=numpy.uint8)
+        self.action_space = spaces.Box(low=0., high=5e-3, shape=(1,), dtype=numpy.float32)
+        self.observation_space = spaces.Box(0, 255, shape=(1, 28, 28), dtype=numpy.uint8)
 
         self.state = None
         self.initial_count = None
@@ -197,7 +197,7 @@ class DebugSTEDEnv(gym.Env):
     def step(self, action):
 
         # We manually rescale and clip the actions which are out of action space
-        m, M = -2, 2
+        m, M = -1, 1
         action = (action - m) / (M - m)
         action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
@@ -238,14 +238,15 @@ class DebugSTEDEnv(gym.Env):
         fg_s *= fg_c
 
         # Only calculates the bleach
-        c1, c2 = conf1.mean(), conf2.mean()
+        c1, c2 = self.state.mean(), conf2.mean()
         reward = (c1 - c2) / c1
 
         # print(self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c))
         # print(reward)
 
-        done = True
-        observation = conf2.ravel()#[..., numpy.newaxis]
+        done = conf2.sum() < 1.
+        # print("EHY", done, reward)
+        observation = conf2[numpy.newaxis, ...]
         info = {
             "bleached" : bleached,
             "sted_image" : sted_image,
@@ -263,7 +264,7 @@ class DebugSTEDEnv(gym.Env):
 
         :returns : A `numpy.ndarray` of the molecules
         """
-        molecules_disposition = numpy.zeros((10, 10))
+        molecules_disposition = numpy.zeros((20, 20))
         molecules_disposition[5, 5] = 10
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
@@ -279,7 +280,7 @@ class DebugSTEDEnv(gym.Env):
         )
 
         self.initial_count = molecules_disposition.sum()
-        return self.state.ravel()#[..., numpy.newaxis]
+        return self.state[numpy.newaxis, ...]
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
