@@ -9,7 +9,6 @@ import numpy
 import itertools
 import warnings
 
-from statsmodels.tsa.stattools import acf
 from scipy.ndimage import gaussian_filter
 from scipy import optimize
 from skimage.transform import resize

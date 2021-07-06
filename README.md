@@ -4,32 +4,37 @@ OpenAI gym implementation of the pysted simulator
 
 ## Installation
 
+### Gym
+
+We recommend using a `Python` environment.
+```bash
+conda create -n gym-sted python=3.8
+conda activate gym-sted
+```
+
 This requires to install `pysted`
 ```bash
 git clone https://github.com/bturc/audurand_pysted.git
 pip install -e audurand_pysted
 ```
 
-This also requires to install `baselines`. I installed tensorflow 2.X, this implies that I had to install `baselines` from the `tf2` branch
-```bash
-git clone https://github.com/openai/baselines.git
-git checkout origin/tf2
-pip install -e baselines
-```
-
-Then you can install gym-sted. I am currently forcing `gym==0.14` since this is the only compatible version of `gym` which worked for me.
+Then you can install `gym-sted`.
 ```bash
 pip install -e .
 ```
 
-## Running an experiment
+### Baselines
 
-We will use the `baselines` library to run the experiments.
+The baseline models are available at this [repository](https://github.com/FLClab/gym-sted-pfrl).
 ```bash
-python -m baselines.run --alg=ppo2 --env=gym_sted:STED-v0 --network=cnn --num_timesteps=1e4 --log_path=./tmp --save-path=./tmpsave
+git clone git@github.com:FLClab/gym-sted-pfrl.git
+pip install -e gym-sted-pfrl
 ```
 
-In this example I run a debug experiment
+## Running an experiment
+
+We use `gym-sted-pfrl` to run the experiment.
 ```bash
-python -m baselines.run --alg=ppo2 --env=gym_sted:STEDdebug-v0 --network=mlp --num_timesteps=1e6 --log_path=./tmp --save_path=./tmpsave
+cd gym-sted-pfrl
+python main.py --env gym_sted:STEDdebug-v0 --batchsize=16 --reward-scale-factor=1.0 --eval-interval=100 --eval-n-runs=5
 ```
