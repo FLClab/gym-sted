@@ -7,10 +7,8 @@ from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
-# from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
-from gym_sted.utils import MicroscopeGenerator, get_foreground
-# from gym_sted.rewards import BoundedRewardCalculator, RewardCalculator, objectives
-from gym_sted.rewards import objectives
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
+from gym_sted.rewards import BoundedRewardCalculator, RewardCalculator, objectives
 
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
@@ -155,7 +153,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         self.microscope = self.microscope_generator.generate_microscope()
 
         self.action_space = spaces.Box(low=0., high=5e-3, shape=(1,), dtype=numpy.float32)
-        self.observation_space = spaces.Box(0, 2**16, shape=(1, 20, 20), dtype=numpy.uint16)
+        self.observation_space = spaces.Box(0, 2**16, shape=(1, 64, 64), dtype=numpy.uint16)
 
         self.state = None
         self.initial_count = None
@@ -213,7 +211,6 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         fg_s *= fg_c
 
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-        print(reward)
         reward = (1 - (reward[0] - 40) / (250 - 40)) + reward[1]
 
         done = action == self.action_space.high
