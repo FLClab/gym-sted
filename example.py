@@ -43,7 +43,9 @@ if __name__ == '__main__':
     # directory, including one with existing data -- all monitor files
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
+    import tempfile
     outdir = './tmp/random-agent-results'
+    outdir = tempfile.mkdtemp()
     env = wrappers.Monitor(env, directory=outdir, force=True)
     env.seed(0)
     agent = RandomAgent(env.action_space)
@@ -52,7 +54,7 @@ if __name__ == '__main__':
     objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in obj_names})
     bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in obj_names})
     env.update_(
-        reward_calculator=RewardCalculator(objs, bounds)
+        reward_calculator=RewardCalculator(objs)
     )
 
     episode_count = 2
