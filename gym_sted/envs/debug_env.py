@@ -214,8 +214,8 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         reward = (1 - (reward[0] - 40) / (250 - 40)) + reward[1]
 
         done = action == self.action_space.high
-        # print("EHY", done, reward)
-        observation = conf2[numpy.newaxis, ...]
+
+        observation = conf2[numpy.newaxis, ...] / 1000
         info = {
             "bleached" : bleached,
             "sted_image" : sted_image,
@@ -247,7 +247,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         )
 
         self.initial_count = molecules_disposition.sum()
-        return self.state[numpy.newaxis, ...]
+        return self.state[numpy.newaxis, ...] / 1000
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
