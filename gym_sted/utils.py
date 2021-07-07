@@ -1,9 +1,11 @@
 
 import numpy
+import warnings
 
 from skimage import filters
 
 from pysted import base, utils
+from pysted import exp_data_gen as dg
 
 def get_foreground(img):
     """Return a background mask of the given image using the OTSU method to threshold.
@@ -14,6 +16,44 @@ def get_foreground(img):
     """
     val = filters.threshold_otsu(img)
     return img > val
+
+class SynapseGenerator():
+    """
+    Creates a synapse generator
+    """
+    def __init__(self, molecules=2, n_nanodomains=40, n_molecs_in_domain=25,
+                    min_dist=100, valid_thickness=3, mode="rand", seed=None):
+        # Assigns member variables
+        self.molecules = molecules
+        self.n_nanodomains = n_nanodomains
+        self.n_molecs_in_domain = n_molecs_in_domain
+        self.min_dist = min_dist
+        self.valid_thickness = valid_thickness
+        self.mode = mode
+        self.seed = seed
+
+    def __call__(self):
+        """
+        Implements the `call` method of the class.
+
+        :returns : A `numpy.ndarray` of the molecules
+        """
+        return self.generate()
+
+    def generate(self):
+        """
+        Generates the molecule disposition
+
+        :returns : A `numpy.ndarray` of the molecules
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            synapse = dg.Synapse(self.molecules, mode=self.mode, seed=self.seed)
+            synapse.add_nanodomains(
+                self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
+                n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
+            )
+        return synapse.frame
 
 class MoleculesGenerator():
     """
@@ -63,6 +103,9 @@ class MoleculesGenerator():
         return datamap, numpy.array(pos)
 
 class MicroscopeGenerator():
+    """
+    Generate a Microscope configuration
+    """
     def __init__(self, **kwargs):
 
         # Creates a default datamap
@@ -83,7 +126,7 @@ class MicroscopeGenerator():
         self.fluo_params = kwargs.get("fluo",{
             "lambda_": 535e-9,
             "qy": 0.6,
-            "sigma_abs": {488: 3e-20,
+            "sigma_abs": {488: 1.15e-20,
                           575: 6e-21},
             "sigma_ste": {560: 1.2e-20,
                           575: 6.0e-21,
