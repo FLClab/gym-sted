@@ -150,7 +150,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
     def __init__(self):
 
-        # self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
+        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
@@ -162,8 +162,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = BoundedRewardCalculator(objs, bounds)
-        # self._reward_calculator = RewardCalculator(objs)
+        self.reward_calculator = RewardCalculator(objs)
 
         self.datamap = None
         self.viewer = None
@@ -213,14 +212,11 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         # remove STED foreground points not in confocal foreground, if any
         fg_s *= fg_c
 
-        # Only calculates the bleach
-        c1, c2 = self.state.mean(), conf2.mean()
-        reward = (c1 - c2) / c1
+        reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        print(reward)
+        reward = (1 - (reward[0] - 40) / (250 - 40)) + reward[1]
 
-        # print(self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c))
-        # print(reward)
-
-        done = conf2.sum() < 1.
+        done = action == self.action_space.high
         # print("EHY", done, reward)
         observation = conf2[numpy.newaxis, ...]
         info = {
@@ -239,9 +235,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         Resets the environment with a new datamap
         :returns : A `numpy.ndarray` of the molecules
         """
-        # molecules_disposition = self.synapse_generator()
-        molecules_disposition = numpy.zeros((20, 20))
-        molecules_disposition[10, 10] = 10
+        molecules_disposition = self.synapse_generator()
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
                 "whole_datamap" : molecules_disposition,
