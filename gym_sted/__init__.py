@@ -7,7 +7,13 @@ register(
 )
 
 register(
-    id='STEDdebug-v0',
-    entry_point='gym_sted.envs:DebugSTEDEnv',
+    id="STEDdebugResolutionSNR-v0",
+    entry_point='gym_sted.envs:DebugResolutionSNRSTEDEnv',
+    max_episode_steps=5
+)
+
+register(
+    id='STEDdebugBleach-v0',
+    entry_point='gym_sted.envs:DebugBleachSTEDEnv',
     max_episode_steps=3,
 )
