@@ -255,3 +255,58 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
     def close(self):
         return None
+
+class DebugBleachSTEDTimedEnv(gym.Env):
+
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self):
+
+        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
+        self.microscope_generator = MicroscopeGenerator()
+        self.microscope = self.microscope_generator.generate_microscope()
+
+        self.action_space = spaces.Box(low=0., high=5e-3, shape=(1,), dtype=numpy.float32)
+        self.observation_space = spaces.Box(0, 2 ** 16, shape=(1, 20, 20), dtype=numpy.uint16)
+
+        self.state = None
+        self.initial_count = None
+
+        objs = OrderedDict({obj_name: obj_dict[obj_name] for obj_name in self.obj_names})
+        bounds = OrderedDict({obj_name: bounds_dict[obj_name] for obj_name in self.obj_names})
+        self.reward_calculator = BoundedRewardCalculator(objs, bounds)
+        # self._reward_calculator = RewardCalculator(objs)
+
+        self.temporal_datamap = None
+        self.viewer = None
+
+        self.seed()
+
+    def step(self, action):
+        pass
+
+    def reset(self):
+        """
+        Resets the environment with a new datamap
+        :returns: A `TemporalDatmap` object containing the evolution of the datamap as the flash occurs
+        """
+        molecules_disposition = numpy.ones((20, 20)) * 5   # create a filled square dmap for debugging purpouses
+        self.temporal_datamap = self.microscope_generator.generate_temporal_datamap(
+            datamap = {
+                "whole_datamap" : molecules_disposition,
+                "datamap_pixelsize" : self.microscope_generator.pixelsize
+            }
+        )
+
+        # a temporal_datamap has been created with its flash_tstack, so we are ready to start an experiment loop?
+        # what else am I missing?
+        pass
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+    def close(self):
+        return None
+
+
