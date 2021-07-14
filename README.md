@@ -15,6 +15,7 @@ conda activate gym-sted
 This requires to install `pysted`
 ```bash
 git clone https://github.com/bturc/audurand_pysted.git
+pip install -r audurand_pysted/requirements.txt
 pip install -e audurand_pysted
 ```
 
