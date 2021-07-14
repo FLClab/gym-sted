@@ -8,8 +8,9 @@ from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
+from gym_sted import rewards
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
-from gym_sted.rewards import BoundedRewardCalculator, RewardCalculator, objectives
+from gym_sted.rewards import objectives
 
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
@@ -22,6 +23,11 @@ bounds_dict = {
     "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
     "Resolution" : {"min" : 0, "max" : 80}
 }
+scales_dict = {
+    "SNR" : {"min" : 0, "max" : 2},
+    "Bleach" : {"min" : 0, "max" : 1},
+    "Resolution" : {"min" : 40, "max" : 250}
+}
 
 class STEDEnv(gym.Env):
     """
@@ -32,7 +38,7 @@ class STEDEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR"]
 
-    def __init__(self):
+    def __init__(self, reward_calculator="SumRewardCalculator"):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
@@ -46,8 +52,8 @@ class STEDEnv(gym.Env):
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = BoundedRewardCalculator(objs, bounds)
-        # self._reward_calculator = RewardCalculator(objs)
+        scales = OrderedDict({obj_name : scales_dict[obj_name] for obj_name in self.obj_names})
+        self.reward_calculator = getattr(rewards, reward_calculator)(objs, bounds=bounds, scales=scales)
 
         self.datamap = None
         self.viewer = None
@@ -57,9 +63,9 @@ class STEDEnv(gym.Env):
     def step(self, action):
 
         # We manually rescale and clip the actions which are out of action space
-        m, M = -5, 5
-        action = (action - m) / (M - m)
-        action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
+        # m, M = -5, 5
+        # action = (action - m) / (M - m)
+        # action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
         # Generates imaging parameters
@@ -167,3 +173,9 @@ class STEDEnv(gym.Env):
 
     def close(self):
         return None
+
+if __name__ == "__main__":
+
+
+    env = STEDEnv()
+    print(env)

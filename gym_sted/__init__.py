@@ -2,8 +2,19 @@
 from gym.envs.registration import registry, register, make, spec
 
 register(
-    id='STED-v0',
+    id='STEDsum-v0',
     entry_point='gym_sted.envs:STEDEnv',
+    kwargs={
+        "reward_calculator" : "SumRewardCalculator"
+    }
+)
+
+register(
+    id='STEDbounded-v0',
+    entry_point='gym_sted.envs:STEDEnv',
+    kwargs={
+        "reward_calculator" : "BoundedRewardCalculator"
+    }
 )
 
 register(
