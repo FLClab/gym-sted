@@ -37,5 +37,5 @@ pip install -e gym-sted-pfrl
 We use `gym-sted-pfrl` to run the experiment.
 ```bash
 cd gym-sted-pfrl
-python main.py --env gym_sted:STEDdebug-v0 --batchsize=16 --reward-scale-factor=1.0 --eval-interval=100 --eval-n-runs=5
+python main.py --env gym_sted:STEDdebugBleach-v0 --batchsize=16 --reward-scale-factor=1.0 --eval-interval=100 --eval-n-runs=5
 ```
