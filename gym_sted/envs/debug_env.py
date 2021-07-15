@@ -280,6 +280,8 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         self.temporal_datamap = None
         self.viewer = None
 
+        # Do I need to init other stuff since this is a timed exp ?
+
         self.seed()
 
     def step(self, action):
