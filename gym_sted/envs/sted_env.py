@@ -63,9 +63,9 @@ class STEDEnv(gym.Env):
     def step(self, action):
 
         # We manually rescale and clip the actions which are out of action space
-        # m, M = -5, 5
-        # action = (action - m) / (M - m)
-        # action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
+        m, M = -1, 1
+        action = (action - m) / (M - m)
+        action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
         # Generates imaging parameters
@@ -104,7 +104,6 @@ class STEDEnv(gym.Env):
         fg_s *= fg_c
 
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-        # print(self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c))
         # print(reward)
 
         done = True
