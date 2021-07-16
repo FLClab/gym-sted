@@ -33,7 +33,7 @@ class DebugBleachSTEDEnv(gym.Env):
         self.microscope = self.microscope_generator.generate_microscope()
 
         self.action_space = spaces.Box(low=0., high=5e-3, shape=(1,), dtype=numpy.float32)
-        self.observation_space = spaces.Box(0, 2**16, shape=(1, 20, 20), dtype=numpy.uint16)
+        self.observation_space = spaces.Box(0, 2**16, shape=(20, 20, 1), dtype=numpy.uint16)
 
         self.state = None
         self.initial_count = None
@@ -51,9 +51,6 @@ class DebugBleachSTEDEnv(gym.Env):
     def step(self, action):
 
         # We manually rescale and clip the actions which are out of action space
-        m, M = -1, 1
-        action = (action - m) / (M - m)
-        action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
         # Generates imaging parameters
@@ -100,7 +97,7 @@ class DebugBleachSTEDEnv(gym.Env):
 
         done = conf2.sum() < 1.
         # print("EHY", done, reward)
-        observation = conf2[numpy.newaxis, ...]
+        observation = conf2[..., numpy.newaxis]
         info = {
             "bleached" : bleached,
             "sted_image" : sted_image,
@@ -133,7 +130,7 @@ class DebugBleachSTEDEnv(gym.Env):
         )
 
         self.initial_count = molecules_disposition.sum()
-        return self.state[numpy.newaxis, ...]
+        return self.state[..., numpy.newaxis]
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -153,14 +150,14 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         self.microscope = self.microscope_generator.generate_microscope()
 
         self.action_space = spaces.Box(low=0., high=5e-3, shape=(1,), dtype=numpy.float32)
-        self.observation_space = spaces.Box(0, 2**16, shape=(1, 64, 64), dtype=numpy.uint16)
+        self.observation_space = spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16)
 
         self.state = None
         self.initial_count = None
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = RewardCalculator(objs)
+        self.reward_calculator = MORewardCalculator(objs)
 
         self.datamap = None
         self.viewer = None
@@ -170,9 +167,6 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
     def step(self, action):
 
         # We manually rescale and clip the actions which are out of action space
-        m, M = -1, 1
-        action = (action - m) / (M - m)
-        action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
         # Generates imaging parameters
@@ -215,7 +209,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         done = action == self.action_space.high
 
-        observation = conf2[numpy.newaxis, ...] / 1000
+        observation = conf2[..., numpy.newaxis]
         info = {
             "bleached" : bleached,
             "sted_image" : sted_image,
@@ -247,7 +241,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         )
 
         self.initial_count = molecules_disposition.sum()
-        return self.state[numpy.newaxis, ...] / 1000
+        return self.state[..., numpy.newaxis]
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
