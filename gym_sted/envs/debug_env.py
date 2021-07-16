@@ -40,7 +40,7 @@ class DebugBleachSTEDEnv(gym.Env):
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = BoundedRewardCalculator(objs, bounds)
+        self.reward_calculator = BoundedRewardCalculator(objs, bounds=bounds)
         # self._reward_calculator = RewardCalculator(objs)
 
         self.datamap = None
