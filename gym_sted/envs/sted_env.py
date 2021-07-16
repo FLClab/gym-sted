@@ -45,7 +45,7 @@ class STEDEnv(gym.Env):
         self.microscope = self.microscope_generator.generate_microscope()
 
         self.action_space = spaces.Box(low=5e-6, high=5e-3, shape=(1,), dtype=numpy.float32)
-        self.observation_space = spaces.Box(0, 255, shape=(1, 64, 64), dtype=numpy.uint8)
+        self.observation_space = spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16)
 
         self.state = None
         self.initial_count = None
@@ -64,9 +64,6 @@ class STEDEnv(gym.Env):
     def step(self, action):
 
         # We manually rescale and clip the actions which are out of action space
-        m, M = -1, 1
-        action = (action - m) / (M - m)
-        action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
         # Generates imaging parameters
@@ -108,7 +105,7 @@ class STEDEnv(gym.Env):
         rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         done = True
-        observation = conf2[numpy.newaxis, ...]
+        observation = conf2[..., numpy.newaxis]
         info = {
             "bleached" : bleached,
             "sted_image" : sted_image,
@@ -142,7 +139,7 @@ class STEDEnv(gym.Env):
         )
 
         self.initial_count = molecules_disposition.sum()
-        return self.state[numpy.newaxis, ...]
+        return self.state[..., numpy.newaxis]
 
     def render(self, info, mode='human'):
         """
