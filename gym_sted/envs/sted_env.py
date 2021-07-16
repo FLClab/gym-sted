@@ -21,12 +21,12 @@ obj_dict = {
 bounds_dict = {
     "SNR" : {"min" : 0.20, "max" : numpy.inf},
     "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 80}
+    "Resolution" : {"min" : 0, "max" : 100}
 }
 scales_dict = {
-    "SNR" : {"min" : 0, "max" : 2},
+    "SNR" : {"min" : 0, "max" : 1},
     "Bleach" : {"min" : 0, "max" : 1},
-    "Resolution" : {"min" : 40, "max" : 250}
+    "Resolution" : {"min" : 40, "max" : 180}
 }
 
 class STEDEnv(gym.Env):
@@ -54,6 +54,7 @@ class STEDEnv(gym.Env):
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
         scales = OrderedDict({obj_name : scales_dict[obj_name] for obj_name in self.obj_names})
         self.reward_calculator = getattr(rewards, reward_calculator)(objs, bounds=bounds, scales=scales)
+        self._reward_calculator = rewards.MORewardCalculator(objs, bounds=bounds, scales=scales)
 
         self.datamap = None
         self.viewer = None
@@ -104,7 +105,7 @@ class STEDEnv(gym.Env):
         fg_s *= fg_c
 
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-        # print(reward)
+        rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         done = True
         observation = conf2[numpy.newaxis, ...]
@@ -114,7 +115,8 @@ class STEDEnv(gym.Env):
             "conf1" : conf1,
             "conf2" : conf2,
             "fg_c" : fg_c,
-            "fg_s" : fg_s
+            "fg_s" : fg_s,
+            "rewards" : rewards
         }
 
         return observation, reward, done, info
@@ -175,6 +177,12 @@ class STEDEnv(gym.Env):
 
 if __name__ == "__main__":
 
+    from pysted.utils import mse_calculator
 
-    env = STEDEnv()
-    print(env)
+    env = STEDEnv(reward_calculator="BoundedRewardCalculator")
+    images = []
+    for i in numpy.linspace(-1, 1, 10):
+        obs = env.reset()
+        images.append(obs[0])
+        obs, reward, done, info = env.step(numpy.array([i]))
+        print(reward)
