@@ -7,8 +7,9 @@ from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
+from gym_sted import rewards
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
-from gym_sted.rewards import BoundedRewardCalculator, RewardCalculator, objectives
+from gym_sted.rewards import objectives
 
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
@@ -40,7 +41,7 @@ class DebugBleachSTEDEnv(gym.Env):
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = BoundedRewardCalculator(objs, bounds=bounds)
+        self.reward_calculator = rewards.BoundedRewardCalculator(objs, bounds=bounds)
         # self._reward_calculator = RewardCalculator(objs)
 
         self.datamap = None
@@ -157,7 +158,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = MORewardCalculator(objs)
+        self.reward_calculator = rewards.MORewardCalculator(objs)
 
         self.datamap = None
         self.viewer = None
@@ -206,8 +207,9 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
         reward = (1 - (reward[0] - 40) / (250 - 40)) + reward[1]
+        reward = reward.item()
 
-        done = action == self.action_space.high
+        done = numpy.all(action == self.action_space.high)
 
         observation = conf2[..., numpy.newaxis]
         info = {
