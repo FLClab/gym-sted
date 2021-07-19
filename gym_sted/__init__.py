@@ -26,6 +26,15 @@ register(
 )
 
 register(
+    id='STEDbounded-v1',
+    entry_point='gym_sted.envs:STEDEnv',
+    kwargs={
+        "reward_calculator" : "BoundedRewardCalculator",
+        "actions" : ["p_sted", "p_ex", "pdt"]
+    }
+)
+
+register(
     id="STEDdebugResolutionSNR-v0",
     entry_point='gym_sted.envs:DebugResolutionSNRSTEDEnv',
     max_episode_steps=5
