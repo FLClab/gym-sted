@@ -330,7 +330,6 @@ class DebugBleachSTEDTimedEnv(gym.Env):
 
         # Acquire a STED image (with all the time wizardy bullshit)
         sted_image, bleached = self.temporal_experiment.play_action(**sted_params)
-        print(f"time after taking a step = {self.temporal_experiment.clock.current_time}")
 
         # Acquire an 'instant' confocal image
         # conf2, bleached, _ = self.microscope.get_signal_and_bleach(
