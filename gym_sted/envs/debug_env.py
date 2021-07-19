@@ -27,18 +27,28 @@ scales_dict = {
     "Bleach" : {"min" : 0, "max" : 1},
     "Resolution" : {"min" : 40, "max" : 180}
 }
+action_spaces = {
+    "p_sted" : {"low" : 5.0e-6, "high" : 5.0e-3},
+    "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},
+    "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
+}
 
 class DebugBleachSTEDEnv(gym.Env):
 
     obj_names = ["Bleach"]
 
-    def __init__(self, reward_calculator="SumRewardCalculator"):
+    def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"]):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
-        self.action_space = spaces.Box(low=0., high=5e-3, shape=(1,), dtype=numpy.float32)
+        self.actions = actions
+        self.action_space = spaces.Box(
+            low=numpy.array([action_spaces[name]["low"] for name in self.actions]),
+            high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
+            shape=(len(self.actions),), dtype=numpy.float32
+        )
         self.observation_space = spaces.Box(0, 2**16, shape=(20, 20, 1), dtype=numpy.uint16)
 
         self.state = None
@@ -63,9 +73,9 @@ class DebugBleachSTEDEnv(gym.Env):
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
             imaging = {
-                "pdt" : 100.0e-6,
-                "p_ex" : 2.0e-6,
-                "p_sted" : action[0]
+                name : action[self.actions.index(name)]
+                    if name in self.actions else getattr(defaults, name.upper())
+                    for name in ["pdt", "p_ex", "p_sted"]
             }
         )
         conf_params = self.microscope_generator.generate_params()
@@ -149,13 +159,18 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
     obj_names = ["Resolution", "SNR"]
 
-    def __init__(self, reward_calculator="MORewardCalculator"):
+    def __init__(self, reward_calculator="MORewardCalculator", actions=["p_sted"]):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
-        self.action_space = spaces.Box(low=0., high=5e-3, shape=(1,), dtype=numpy.float32)
+        self.actions = actions
+        self.action_space = spaces.Box(
+            low=numpy.array([action_spaces[name]["low"] for name in self.actions]),
+            high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
+            shape=(len(self.actions),), dtype=numpy.float32
+        )
         self.observation_space = spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16)
 
         self.state = None
@@ -180,9 +195,9 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
             imaging = {
-                "pdt" : 100.0e-6,
-                "p_ex" : 2.0e-6,
-                "p_sted" : action[0]
+                name : action[self.actions.index(name)]
+                    if name in self.actions else getattr(defaults, name.upper())
+                    for name in ["pdt", "p_ex", "p_sted"]
             }
         )
         conf_params = self.microscope_generator.generate_params()
