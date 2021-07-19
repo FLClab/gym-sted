@@ -7,7 +7,7 @@ from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
-from gym_sted import rewards
+from gym_sted import rewards, defaults
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
 from gym_sted.rewards import objectives
 
