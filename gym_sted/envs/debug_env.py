@@ -22,12 +22,17 @@ bounds_dict = {
     "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
     "Resolution" : {"min" : 0, "max" : 80}
 }
+scales_dict = {
+    "SNR" : {"min" : 0, "max" : 1},
+    "Bleach" : {"min" : 0, "max" : 1},
+    "Resolution" : {"min" : 40, "max" : 180}
+}
 
 class DebugBleachSTEDEnv(gym.Env):
 
-    obj_names = ["Resolution", "Bleach", "SNR"]
+    obj_names = ["Bleach"]
 
-    def __init__(self):
+    def __init__(self, reward_calculator="SumRewardCalculator"):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
@@ -41,8 +46,9 @@ class DebugBleachSTEDEnv(gym.Env):
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = rewards.BoundedRewardCalculator(objs, bounds=bounds)
-        # self._reward_calculator = RewardCalculator(objs)
+        scales = OrderedDict({obj_name : scales_dict[obj_name] for obj_name in self.obj_names})
+        self.reward_calculator = getattr(rewards, reward_calculator)(objs, bounds=bounds, scales=scales)
+        self._reward_calculator = rewards.MORewardCalculator(objs, bounds=bounds, scales=scales)
 
         self.datamap = None
         self.viewer = None
@@ -90,22 +96,21 @@ class DebugBleachSTEDEnv(gym.Env):
         fg_s *= fg_c
 
         # Only calculates the bleach
-        c1, c2 = self.state.mean(), conf2.mean()
-        reward = (c1 - c2) / c1
-
-        # print(self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c))
-        # print(reward)
+        reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         done = conf2.sum() < 1.
         # print("EHY", done, reward)
         observation = conf2[..., numpy.newaxis]
         info = {
+            "action" : action,
             "bleached" : bleached,
             "sted_image" : sted_image,
             "conf1" : conf1,
             "conf2" : conf2,
             "fg_c" : fg_c,
-            "fg_s" : fg_s
+            "fg_s" : fg_s,
+            "rewards" : rewards
         }
 
         return observation, reward, done, info
@@ -144,7 +149,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
     obj_names = ["Resolution", "SNR"]
 
-    def __init__(self):
+    def __init__(self, reward_calculator="MORewardCalculator"):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
@@ -158,7 +163,9 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = rewards.MORewardCalculator(objs)
+        scales = OrderedDict({obj_name : scales_dict[obj_name] for obj_name in self.obj_names})
+        self.reward_calculator = getattr(rewards, reward_calculator)(objs, bounds=bounds, scales=scales)
+        self._reward_calculator = rewards.MORewardCalculator(objs, bounds=bounds, scales=scales)
 
         self.datamap = None
         self.viewer = None
@@ -208,17 +215,20 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
         reward = (1 - (reward[0] - 40) / (250 - 40)) + reward[1]
         reward = reward.item()
+        rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         done = numpy.all(action == self.action_space.high)
 
         observation = conf2[..., numpy.newaxis]
         info = {
+            "action" : action,
             "bleached" : bleached,
             "sted_image" : sted_image,
             "conf1" : conf1,
             "conf2" : conf2,
             "fg_c" : fg_c,
-            "fg_s" : fg_s
+            "fg_s" : fg_s,
+            "rewards" : rewards
         }
 
         return observation, reward, done, info

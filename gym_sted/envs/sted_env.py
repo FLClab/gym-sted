@@ -107,6 +107,7 @@ class STEDEnv(gym.Env):
         done = True
         observation = conf2[..., numpy.newaxis]
         info = {
+            "action" : action,
             "bleached" : bleached,
             "sted_image" : sted_image,
             "conf1" : conf1,
