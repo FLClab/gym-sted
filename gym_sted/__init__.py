@@ -10,6 +10,14 @@ register(
 )
 
 register(
+    id='STEDmultiply-v0',
+    entry_point='gym_sted.envs:STEDEnv',
+    kwargs={
+        "reward_calculator" : "MultiplyRewardCalculator"
+    }
+)
+
+register(
     id='STEDbounded-v0',
     entry_point='gym_sted.envs:STEDEnv',
     kwargs={

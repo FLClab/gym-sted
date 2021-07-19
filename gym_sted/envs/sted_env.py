@@ -177,9 +177,10 @@ if __name__ == "__main__":
 
     from pysted.utils import mse_calculator
 
-    env = STEDEnv(reward_calculator="BoundedRewardCalculator")
+    env = STEDEnv(reward_calculator="MultiplyRewardCalculator")
     images = []
-    for i in numpy.linspace(-1, 1, 10):
+    # for i in numpy.linspace(-1, 1, 10):
+    for i in numpy.linspace(5e-6, 5e-3, 10):
         obs = env.reset()
         images.append(obs[0])
         obs, reward, done, info = env.step(numpy.array([i]))
