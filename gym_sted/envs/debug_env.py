@@ -303,7 +303,7 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
             imaging={
-                "pdt": 100.0e-6,
+                "pdt": numpy.ones(self.temporal_datamap.whole_datamap[self.temporal_datamap.roi].shape) * 100.0e-6,
                 "p_ex": 2.0e-6,
                 "p_sted": action[0]   # for now the agent only controls the STED power
             }
@@ -322,23 +322,40 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         conf_params = self.microscope_generator.generate_params()
 
         # Acquire an 'instant' confocal image
-        conf1, bleached, _ = self.microscope.get_signal_and_bleach(
-            self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
-        )
+        # conf1, bleached, _ = self.microscope.get_signal_and_bleach(
+        #     self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
+        # )
+        # Instead of using confocals I will directly use the number of molecules in the "base"
+        n_molecs_init = self.temporal_datamap.base_datamap.sum()
 
         # Acquire a STED image (with all the time wizardy bullshit)
         sted_image, bleached = self.temporal_experiment.play_action(**sted_params)
+        print(f"time after taking a step = {self.temporal_experiment.clock.current_time}")
 
         # Acquire an 'instant' confocal image
-        conf2, bleached, _ = self.microscope.get_signal_and_bleach(
-            self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
-        )
+        # conf2, bleached, _ = self.microscope.get_signal_and_bleach(
+        #     self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
+        # )
+        # Instead of using confocals I will directly use the number of molecules in the "base"
+        n_molecs_post = self.temporal_datamap.base_datamap.sum()
 
         # do stuff to compute the rewards and stuff here
-        pass
+        reward = (n_molecs_init - n_molecs_post) / n_molecs_init
+
+        # done when either everything bleached or the clock_time is greater than the exp time
+        done = (n_molecs_post < 1) or (self.temporal_experiment.clock.current_time >= self.exp_time_us)
+
+        observation = sted_image[numpy.newaxis, ...]
+        # input(f"OBSERVATION SHAPE = {observation.shape}")
+        info = {
+            "bleached": bleached,
+            "sted_image": sted_image,
+            "n molecules init": n_molecs_init,
+            "n molecules post": n_molecs_post,
+        }
 
         # return something eventually :)
-        return None
+        return observation, reward, done, info
 
     def reset(self):
         """
@@ -347,12 +364,11 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         """
         molecules_disposition = numpy.ones((20, 20)) * 5   # create a filled square dmap for debugging purpouses
         self.temporal_datamap = self.microscope_generator.generate_temporal_datamap(
-            datamap = {
+            temporal_datamap = {
                 "whole_datamap" : molecules_disposition,
                 "datamap_pixelsize" : self.microscope_generator.pixelsize
             }
         )
-
         # a temporal_datamap has been created with its flash_tstack, so we are ready to start an experiment loop?
         # what else am I missing?
         # tous les ptits gars qui étaient à None dans le init doivent avoir une valeur mtn si je comprends bien
