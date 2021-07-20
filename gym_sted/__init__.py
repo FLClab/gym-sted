@@ -24,5 +24,11 @@ register(
     # does this correspond to the max number of steps in an episode? If so what is this value in my case?
     # for now the pdt is 100us for a 64x64 dmap, which means 409600 time steps per action, which means
     # the agent can complete 1 action and start another one before the episode is over
-    max_episode_steps=20,   # for now the pdt is 100us for a 64x64 dmap
+    max_episode_steps=20,   # for now the pdt is 100us for a 64x64 dmap, will not go over 13 acqs
+)
+
+register(
+    id='TimeddebugdebugBleach-v0',
+    entry_point='gym_sted.envs:DebugDebugBleachTimedEnv',
+    max_episode_steps=20,   # for now the pdt is 100us for a 64x64 dmap, will not go over 13 acqs
 )

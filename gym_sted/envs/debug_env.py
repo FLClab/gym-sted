@@ -399,4 +399,115 @@ class DebugBleachSTEDTimedEnv(gym.Env):
     def close(self):
         return None
 
+class DebugDebugBleachTimedEnv(gym.Env):
+    """
+    The goal of this debugging env is to see if we still get the weird problem of random forgetting if we bypass all the
+    microscope mechanics.
+    Essentially, selecting a STED power of 0 induces little bleaching, and selecting a STED power of 5e-3 induces a lot
+    of bleaching. To replicate this without using the simulator (in order to train quickly), actions will be between
+    0-1. 0 will cause 1% of the molecules to die, 1 will cause 70%(?) of the molecules to die. Same reward computation
+    as before.
+    *** DONT NORMALIZE BY 1024 ***
+    """
 
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, time_quantum_us=1, exp_time_us=500000):
+
+        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
+        self.microscope_generator = MicroscopeGenerator()
+        self.microscope = self.microscope_generator.generate_microscope()
+
+        # in this debugging gym, the agent will select a value between 0 and 1. 1 will destroy everything, which we want
+        self.action_space = spaces.Box(low=0., high=1., shape=(1,), dtype=numpy.float32)
+        self.observation_space = spaces.Box(0, 2 ** 16, shape=(1, 20, 20), dtype=numpy.uint16)
+
+        self.state = None
+        self.initial_count = None
+
+        objs = OrderedDict({obj_name: obj_dict[obj_name] for obj_name in self.obj_names})
+        bounds = OrderedDict({obj_name: bounds_dict[obj_name] for obj_name in self.obj_names})
+        self.reward_calculator = BoundedRewardCalculator(objs, bounds)
+        # self._reward_calculator = RewardCalculator(objs)
+
+        self.temporal_datamap = None
+        self.viewer = None
+
+        # Do I need to init other stuff since this is a timed exp ?
+        # maybe I need an exp_time, time_quantum_us, clock ?
+        # These 2 vals will be the same for every exp (episode) and do not change during an exp so no need to be reset
+        self.time_quantum_us = time_quantum_us
+        self.exp_time_us = exp_time_us
+
+        self.clock = None
+        self.temporal_experiment = None
+
+        self.seed()
+
+    def step(self, action):
+        # We manually rescale and clip the actions which are out of action space
+        m, M = -1, 1
+        action = (action - m) / (M - m)
+        action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        n_molecs_init = self.temporal_datamap.base_datamap.sum()
+
+        # bleach the datamap according to what I describe in the class preamble
+        bleaching_percent = 0.69 * action + 0.01
+        self.temporal_datamap.base_datamap = numpy.round((1 - bleaching_percent) *
+                                                         self.temporal_datamap.base_datamap).astype(int)
+
+        n_molecs_post = self.temporal_datamap.base_datamap.sum()
+
+        reward = (n_molecs_init - n_molecs_post) / n_molecs_init
+
+        # done when either everything bleached or the clock_time is greater than the exp time
+        done = (n_molecs_post < 1) or (self.temporal_experiment.clock.current_time >= self.exp_time_us)
+
+        # for this case the observation will simply be the base datamap, idk
+        observation = self.temporal_datamap.base_datamap[self.temporal_datamap.roi][numpy.newaxis, ...] / 1024.0
+
+        info = {   # not sure what to put in here now :)
+            "n molecules init": n_molecs_init,
+            "n molecules post": n_molecs_post,
+        }
+
+        return observation, reward, done, info
+
+    def reset(self):
+        """
+        Resets the environment with a new datamap
+        :returns: A `TemporalDatmap` object containing the evolution of the datamap as the flash occurs
+        """
+        molecules_disposition = numpy.ones((20, 20)) * 5  # create a filled square dmap for debugging purpouses
+        self.temporal_datamap = self.microscope_generator.generate_temporal_datamap(
+            temporal_datamap={
+                "whole_datamap": molecules_disposition,
+                "datamap_pixelsize": self.microscope_generator.pixelsize
+            }
+        )
+
+        conf_params = self.microscope_generator.generate_params()
+        # self.state, _, _ = self.microscope.get_signal_and_bleach(
+        #     self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
+        # )
+        self.state = self.temporal_datamap.base_datamap[self.temporal_datamap.roi]
+
+        # comment est-ce que je veux calculer mon bleaching dans le cas où la datamap flash dans le temps?
+        self.initial_count = self.temporal_datamap.base_datamap.sum()
+
+        # reset the other params specific to the timed exp paradigm
+        self.clock = pysted.base.Clock(self.time_quantum_us)
+        self.temporal_experiment = pysted.base.TemporalExperiment(self.clock, self.microscope, self.temporal_datamap,
+                                                                  self.exp_time_us, bleach=True)
+
+        # that's it ? ... ???
+        return self.state[numpy.newaxis, ...] / 1024.0
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+    def close(self):
+        return None
