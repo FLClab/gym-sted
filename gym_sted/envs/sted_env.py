@@ -187,10 +187,11 @@ if __name__ == "__main__":
 
     from pysted.utils import mse_calculator
 
-    env = STEDEnv(reward_calculator="BoundedRewardCalculator", actions=["p_sted", "p_ex", "pdt"])
+    env = STEDEnv(reward_calculator="SumRewardCalculator", actions=["p_sted"])
     images = []
-    for i in range(10):
+    for i in numpy.linspace(env.action_space.low[0], env.action_space.high[0], 10):
         obs = env.reset()
         images.append(obs[0])
-        obs, reward, done, info = env.step(env.action_space.sample())
+        # obs, reward, done, info = env.step(env.action_space.sample())
+        obs, reward, done, info = env.step(numpy.array(i))
         print(reward, info["rewards"], info["action"])
