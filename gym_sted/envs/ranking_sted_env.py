@@ -51,7 +51,8 @@ class rankSTEDEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR"]
 
-    def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"], max_num_requests=1):
+    def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"],
+                    max_num_requests=1, max_episode_steps=10):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
@@ -63,11 +64,16 @@ class rankSTEDEnv(gym.Env):
             high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
             dtype=numpy.float32
         )
-        self.observation_space = spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16)
+
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(0, 1, shape=(max_episode_steps,), dtype=numpy.float32)
+        ))
 
         self.state = None
         self.initial_count = None
         self.current_step = 0
+        self.max_num_requests = max_num_requests
         self.num_request_left = max_num_requests
         self.current_articulation = -1
         self.cummulated_rewards = {
@@ -96,7 +102,6 @@ class rankSTEDEnv(gym.Env):
         # We manually clip the actions which are out of action space
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
         imaging_action, main_action = action[:len(self.actions)], min(int(action[-1]), 2)
-
         # On the last step of the environment we enforce the final decision
         if self.current_step >= self.spec.max_episode_steps - 1:
             main_action = 2
@@ -111,19 +116,19 @@ class rankSTEDEnv(gym.Env):
 
         elif main_action == 1:
             # Asking for preference
-            sted_image = numpy.zeros(self.observation_space.shape[:-1])
-            bleached = numpy.zeros(self.observation_space.shape[:-1])
-            conf1 = numpy.zeros(self.observation_space.shape[:-1])
-            conf2 = numpy.zeros(self.observation_space.shape[:-1])
-            fg_s = numpy.zeros(self.observation_space.shape[:-1])
-            fg_c = numpy.zeros(self.observation_space.shape[:-1])
+            sted_image = numpy.zeros(self.observation_space[0].shape[:-1])
+            bleached = numpy.zeros(self.observation_space[0].shape[:-1])
+            conf1 = numpy.zeros(self.observation_space[0].shape[:-1])
+            conf2 = numpy.zeros(self.observation_space[0].shape[:-1])
+            fg_s = numpy.zeros(self.observation_space[0].shape[:-1])
+            fg_c = numpy.zeros(self.observation_space[0].shape[:-1])
 
             done = False
             reward = 1
             rewards = numpy.zeros((len(self.obj_names, )))
             self.num_request_left -= 1
 
-            if self.cummulated_rewards["rewards"]:
+            if len(self.cummulated_rewards["rewards"]) > 0:
                 self.current_articulation = self.preference_articulation.articulate(self.cummulated_rewards["rewards"])
 
         elif main_action == 2:
@@ -133,7 +138,8 @@ class rankSTEDEnv(gym.Env):
             rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
             # Here reward should be 1 if reward is >= expert choice else it should be 0
-            if self.current_articulation != -1:
+            # We do not give a reward if all rewards are 0
+            if (self.current_articulation != -1) and (reward > 0):
                 r = int(reward >= self.cummulated_rewards["reward"][self.current_articulation])
                 reward += r
             done = True
@@ -159,8 +165,11 @@ class rankSTEDEnv(gym.Env):
             "rewards" : rewards,
             "articulation" : self.current_articulation
         }
-
-        return self.state, reward, done, info
+        if self.current_articulation == -1:
+            articulation = numpy.zeros((self.spec.max_episode_steps, ))
+        else:
+            articulation = numpy.eye(self.spec.max_episode_steps)[self.current_articulation]
+        return [self.state, articulation], reward, done, info
 
     def reset(self):
         """
@@ -168,6 +177,7 @@ class rankSTEDEnv(gym.Env):
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        self.num_request_left = self.max_num_requests
         self.current_step = 0
         self.current_articulation = -1
         self.cummulated_rewards = {
@@ -178,7 +188,7 @@ class rankSTEDEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = state[..., numpy.newaxis]
-        return self.state
+        return [self.state, numpy.zeros((self.spec.max_episode_steps,))]
 
     def render(self, info, mode='human'):
         """
