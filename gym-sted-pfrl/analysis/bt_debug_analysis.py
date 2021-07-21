@@ -15,66 +15,11 @@ from matplotlib import pyplot as plt
 
 
 """
-ici je veux vérifier si mon environement fait bel et bien ce que je pense qu'il fait
-1 - créer un env
-2 - regarder la datamap avant
-3 - faire un step
-4 - regarder la datamap après
-je veux regarder les dmap (whole et base), regarder les chiffres, ? what else? regarder les acqs?
+Mon but ici c'est de loader l'agent que j'ai entrainé avec la normalisation et qui semblait bien performer et de voir
+les actions (donc puissances de STED) qu'il choisit
 """
 
-"""
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--env", type=str, default="gym_sted:TimeddebugdebugBleach-v0")
-    parser.add_argument("--seed", type=int, default=0, help="Random seed [0, 2 ** 32)")
-    parser.add_argument("--monitor", action="store_true")
-    parser.add_argument("--reward-scale-factor", type=float, default=1.)
-    parser.add_argument("--render", action="store_true", default=False)
-    args = parser.parse_args()
-
-    def make_env(test):
-        env = gym.make(args.env)
-        # Use different random seeds for train and test envs
-        env_seed = 2 ** 32 - 1 - args.seed if test else args.seed
-        env.seed(env_seed)
-        # Cast observations to float32 because our model uses float32
-        env = pfrl.wrappers.CastObservationToFloat32(env)
-        if args.monitor:
-            env = pfrl.wrappers.Monitor(env, args.outdir)
-        if not test:
-            # Scale rewards (and thus returns) to a reasonable range so that
-            # training is easier
-            env = pfrl.wrappers.ScaleReward(env, args.reward_scale_factor)
-        if args.render and not test:
-            env = pfrl.wrappers.Render(env)
-        return env
-
-    train_env = make_env(test=False)
-
-    train_env.reset()
-    # plt.imshow(train_env.temporal_datamap.base_datamap)
-    # plt.title("aha")
-    # plt.show()
-    plt.imshow(train_env.temporal_datamap.base_datamap, vmin=0, vmax=5)
-    plt.title(f"n_molecs in base before stepping = {train_env.temporal_datamap.base_datamap.sum()}")
-    plt.show()
-    for i in range(13):
-        train_env.step(5e-3)
-        plt.imshow(train_env.temporal_datamap.base_datamap, vmin=0, vmax=5)
-        plt.title(f"n_molecs in base after {i+1} steps = {train_env.temporal_datamap.base_datamap.sum()}")
-        plt.show()
-"""
-
-"""
-Ici je veux faire un training où il ne passe pas par le simulateur pour bleacher
-1 - on a une datamap qui flash dans le temps comme j'ai en ce moment
-2 - l'agent doit choisir une val entre 0 et 1
-3 - s'il choisit 0, rien bleach, s'il choisit 1, tout bleach, figure it out
-4 - faire un training et vérif le comportement?
-"""
-
-
+# """
 def calc_shape(shape, layers):
     _shape = numpy.array(shape[1:])
     for layer in layers:
@@ -148,10 +93,11 @@ class ValueFunction(nn.Module):
 
 
 def main():
+    # this main uses the fully trained agent
     import logging
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env", type=str, default="gym_sted:TimeddebugdebugBleach-v0")
+    parser.add_argument("--env", type=str, default="gym_sted:TimedSTEDdebugBleach-v0")
     parser.add_argument("--seed", type=int, default=0, help="Random seed [0, 2 ** 32)")
     parser.add_argument("--gpu", type=int, default=None)
     parser.add_argument("--exp_id", type=str, default="debug")
@@ -178,12 +124,12 @@ def main():
     parser.add_argument("--monitor", action="store_true")
     args = parser.parse_args()
 
-    logging.basicConfig(level=args.log_level)
+    # logging.basicConfig(level=args.log_level)
 
     # Set a random seed used in PFRL.
     utils.set_random_seed(args.seed)
 
-    args.outdir = experiments.prepare_output_dir(args, args.outdir, exp_id=args.exp_id, make_backup=not args.dry_run)
+    # args.outdir = experiments.prepare_output_dir(args, args.outdir, exp_id=args.exp_id, make_backup=not args.dry_run)
 
     def make_env(test):
         env = gym.make(args.env)
@@ -255,6 +201,58 @@ def main():
             eval_interval=args.eval_interval,
             train_max_episode_len=timestep_limit,
         )
+# """
+
+"""
+def main():
+    # in this main I want to manually select the max sted power every time and see what happens :)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--env", type=str, default="gym_sted:TimedSTEDdebugBleach-v0")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed [0, 2 ** 32)")
+    parser.add_argument("--monitor", action="store_true")
+    parser.add_argument("--reward-scale-factor", type=float, default=1.)
+    parser.add_argument("--render", action="store_true", default=False)
+    args = parser.parse_args()
+
+    def make_env(test):
+        env = gym.make(args.env)
+        # Use different random seeds for train and test envs
+        env_seed = 2 ** 32 - 1 - args.seed if test else args.seed
+        env.seed(env_seed)
+        # Cast observations to float32 because our model uses float32
+        env = pfrl.wrappers.CastObservationToFloat32(env)
+        if args.monitor:
+            env = pfrl.wrappers.Monitor(env, args.outdir)
+        if not test:
+            # Scale rewards (and thus returns) to a reasonable range so that
+            # training is easier
+            env = pfrl.wrappers.ScaleReward(env, args.reward_scale_factor)
+        if args.render and not test:
+            env = pfrl.wrappers.Render(env)
+        return env
+
+    train_env = make_env(test=False)
+    eval_env = make_env(test=True)
+
+    n_runs = 50
+    n_steps = 13
+    # episode_rewards_array = numpy.zeros((n_runs, n_steps))
+    episode_info = numpy.zeros((n_runs, n_steps, 3))
+    earned_rewards = []
+    for i in range(n_runs):
+        eval_env.reset()
+        for j in range(n_steps):
+            n_molecs_init = eval_env.temporal_datamap.base_datamap.sum()
+            _, _, _, info = eval_env.step(1)
+            n_molecs_post = eval_env.temporal_datamap.base_datamap.sum()
+            episode_info[i, j, 0] = info["sted_power"]
+            episode_info[i, j, 1] = n_molecs_init
+            episode_info[i, j, 2] = n_molecs_post
+
+    save_path = "gym-sted-pfrl/analysis"
+    numpy.save(save_path + "/max_power_spam_agent", episode_info)
+
+"""
 
 if __name__ == "__main__":
     main()
