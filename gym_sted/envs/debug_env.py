@@ -11,19 +11,6 @@ from collections import OrderedDict
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
 from gym_sted.rewards import BoundedRewardCalculator, RewardCalculator, objectives
 
-import os
-
-def make_path_sane(p):
-    """Function to uniformly return a real, absolute filesystem path."""
-    # ~/directory -> /home/user/directory
-    p = os.path.expanduser(p)
-    # A/.//B -> A/B
-    p = os.path.normpath(p)
-    # Resolve symbolic links
-    p = os.path.realpath(p)
-    # Ensure path is absolute
-    p = os.path.abspath(p)
-    return p
 
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
