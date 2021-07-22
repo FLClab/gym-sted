@@ -300,8 +300,6 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         action = (action - m) / (M - m)
         action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
-        path = "gym-sted-pfrl/analysis/trained_agent_actions.txt"
-        file = open(path, "a")
 
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
@@ -340,8 +338,6 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         # )
         # Instead of using confocals I will directly use the number of molecules in the "base"
         n_molecs_post = self.temporal_datamap.base_datamap.sum()
-        file.write(f"{action[0]},{n_molecs_init},{n_molecs_post}\n")
-        file.close()
 
 
         # do stuff to compute the rewards and stuff here
