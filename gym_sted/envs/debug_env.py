@@ -346,7 +346,7 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         # done when either everything bleached or the clock_time is greater than the exp time
         done = (n_molecs_post < 1) or (self.temporal_experiment.clock.current_time >= self.exp_time_us)
 
-        observation = sted_image[numpy.newaxis, ...] / 1024.0   # for debugging testing normalizing
+        observation = sted_image[numpy.newaxis, ...] / 1024.0   # normalize to ensure good NN learning
         # input(f"OBSERVATION SHAPE = {observation.shape}")
         info = {
             "bleached": bleached,
@@ -393,7 +393,7 @@ class DebugBleachSTEDTimedEnv(gym.Env):
                                                                   self.exp_time_us, bleach=True)
 
         # that's it ? ... ???
-        return self.state[numpy.newaxis, ...] / 1024.0   # normalize for debugging
+        return self.state[numpy.newaxis, ...] / 1024.0   # normalize to ensure good NN learning
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
