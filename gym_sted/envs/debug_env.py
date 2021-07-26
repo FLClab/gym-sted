@@ -283,7 +283,7 @@ class DebugBleachSTEDTimedEnv(gym.Env):
 
     obj_names = ["Resolution", "Bleach", "SNR"]
 
-    def __init__(self, time_quantum_us=1, exp_time_us=500000):
+    def __init__(self, time_quantum_us=1, exp_time_us=500000, reward_calculator="MORewardCalculator"):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
@@ -297,7 +297,9 @@ class DebugBleachSTEDTimedEnv(gym.Env):
 
         objs = OrderedDict({obj_name: obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name: bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = BoundedRewardCalculator(objs, bounds)
+        # self.reward_calculator = BoundedRewardCalculator(objs, bounds)
+        scales = OrderedDict({obj_name: scales_dict[obj_name] for obj_name in self.obj_names})
+        self.reward_calculator = getattr(rewards, reward_calculator)(objs, bounds=bounds, scales=scales)
         # self._reward_calculator = RewardCalculator(objs)
 
         self.temporal_datamap = None
