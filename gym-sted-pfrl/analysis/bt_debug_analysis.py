@@ -19,7 +19,7 @@ Mon but ici c'est de loader l'agent que j'ai entrainé avec la normalisation et 
 les actions (donc puissances de STED) qu'il choisit
 """
 
-# """
+"""
 def calc_shape(shape, layers):
     _shape = numpy.array(shape[1:])
     for layer in layers:
@@ -201,9 +201,9 @@ def main():
             eval_interval=args.eval_interval,
             train_max_episode_len=timestep_limit,
         )
-# """
-
 """
+
+# """
 def main():
     # in this main I want to manually select the max sted power every time and see what happens :)
     parser = argparse.ArgumentParser()
@@ -240,6 +240,7 @@ def main():
     episode_info = numpy.zeros((n_runs, n_steps, 3))
     earned_rewards = []
     for i in range(n_runs):
+        print(f"starting run {i+1} of {n_runs}")
         eval_env.reset()
         for j in range(n_steps):
             n_molecs_init = eval_env.temporal_datamap.base_datamap.sum()
@@ -249,10 +250,35 @@ def main():
             episode_info[i, j, 1] = n_molecs_init
             episode_info[i, j, 2] = n_molecs_post
 
-    save_path = "gym-sted-pfrl/analysis"
-    numpy.save(save_path + "/max_power_spam_agent", episode_info)
+    # rewards = (episode_info[:, :, 1] - episode_info[:, :, 2]) / episode_info[:, :, 1]
+    # rewards = numpy.mean(rewards, axis=0)
+    # plt.plot(rewards)
+    # plt.show()
 
-"""
+    # save_path = "gym-sted-pfrl/analysis"
+    # numpy.save(save_path + "/max_power_spam_agent_bug_fix", episode_info)
+    numpy.save("max_power_spam_agent_bug_fix_v2_yo", episode_info)
+
+    # eval_env.reset()
+    # n_steps = 13
+    # rewards = []
+    # for i in range(n_steps):
+    #     print(f"step {i}")
+    #     # print(f"flash_tstep b4 step = {eval_env.temporal_experiment.flash_tstep}")
+    #     # -1 corresponds to a STED power of 0, 1 corresponds to a STED power of 5e-3
+    #     # lower/higher than -1/1 clips to -1/1
+    #     _, _, _, info = eval_env.step(0)
+    #     reward = (info["n molecules init"] - info["n molecules post"]) / info["n molecules init"]
+    #     rewards.append(reward)
+    #     # print(f"flash_tstep after step = {eval_env.temporal_experiment.flash_tstep}")
+    #     # print(info["sted_power"])
+    #     # plt.imshow(info["sted_image"])
+    #     # plt.title(f"step {i}")
+    #     # plt.show()
+    # plt.plot(rewards)
+    # plt.show()
+
+# """
 
 if __name__ == "__main__":
     main()
