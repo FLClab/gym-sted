@@ -1,2 +1,3 @@
 
-from .rewards import RewardCalculator, BoundedRewardCalculator
+from .rewards import (RewardCalculator, MORewardCalculator, SumRewardCalculator,
+                      BoundedRewardCalculator, MultiplyRewardCalculator)

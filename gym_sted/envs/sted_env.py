@@ -8,8 +8,9 @@ from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
+from gym_sted import rewards, defaults
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
-from gym_sted.rewards import BoundedRewardCalculator, RewardCalculator, objectives
+from gym_sted.rewards import objectives
 
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
@@ -20,7 +21,17 @@ obj_dict = {
 bounds_dict = {
     "SNR" : {"min" : 0.20, "max" : numpy.inf},
     "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 80}
+    "Resolution" : {"min" : 0, "max" : 100}
+}
+scales_dict = {
+    "SNR" : {"min" : 0, "max" : 1},
+    "Bleach" : {"min" : 0, "max" : 1},
+    "Resolution" : {"min" : 40, "max" : 180}
+}
+action_spaces = {
+    "p_sted" : {"low" : 5.0e-6, "high" : 5.0e-3},
+    "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},
+    "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
 }
 
 class STEDEnv(gym.Env):
@@ -32,22 +43,28 @@ class STEDEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR"]
 
-    def __init__(self):
+    def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"]):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
-        self.action_space = spaces.Box(low=5e-6, high=5e-3, shape=(1,), dtype=numpy.float32)
-        self.observation_space = spaces.Box(0, 255, shape=(1, 64, 64), dtype=numpy.uint8)
+        self.actions = actions
+        self.action_space = spaces.Box(
+            low=numpy.array([action_spaces[name]["low"] for name in self.actions]),
+            high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
+            shape=(len(self.actions),), dtype=numpy.float32
+        )
+        self.observation_space = spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16)
 
         self.state = None
         self.initial_count = None
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = BoundedRewardCalculator(objs, bounds)
-        # self._reward_calculator = RewardCalculator(objs)
+        scales = OrderedDict({obj_name : scales_dict[obj_name] for obj_name in self.obj_names})
+        self.reward_calculator = getattr(rewards, reward_calculator)(objs, bounds=bounds, scales=scales)
+        self._reward_calculator = rewards.MORewardCalculator(objs, bounds=bounds, scales=scales)
 
         self.datamap = None
         self.viewer = None
@@ -56,18 +73,15 @@ class STEDEnv(gym.Env):
 
     def step(self, action):
 
-        # We manually rescale and clip the actions which are out of action space
-        m, M = -5, 5
-        action = (action - m) / (M - m)
-        action = action * (self.action_space.high - self.action_space.low) + self.action_space.low
+        # We manually clip the actions which are out of action space
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
             imaging = {
-                "pdt" : 100.0e-6,
-                "p_ex" : 2.0e-6,
-                "p_sted" : action[0]
+                name : action[self.actions.index(name)]
+                    if name in self.actions else getattr(defaults, name.upper())
+                    for name in ["pdt", "p_ex", "p_sted"]
             }
         )
         conf_params = self.microscope_generator.generate_params()
@@ -98,18 +112,19 @@ class STEDEnv(gym.Env):
         fg_s *= fg_c
 
         reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-        # print(self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c))
-        # print(reward)
+        rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         done = True
-        observation = conf2[numpy.newaxis, ...]
+        observation = conf2[..., numpy.newaxis]
         info = {
+            "action" : action,
             "bleached" : bleached,
             "sted_image" : sted_image,
             "conf1" : conf1,
             "conf2" : conf2,
             "fg_c" : fg_c,
-            "fg_s" : fg_s
+            "fg_s" : fg_s,
+            "rewards" : rewards
         }
 
         return observation, reward, done, info
@@ -135,7 +150,7 @@ class STEDEnv(gym.Env):
         )
 
         self.initial_count = molecules_disposition.sum()
-        return self.state[numpy.newaxis, ...]
+        return self.state[..., numpy.newaxis]
 
     def render(self, info, mode='human'):
         """
@@ -167,3 +182,16 @@ class STEDEnv(gym.Env):
 
     def close(self):
         return None
+
+if __name__ == "__main__":
+
+    from pysted.utils import mse_calculator
+
+    env = STEDEnv(reward_calculator="SumRewardCalculator", actions=["p_sted"])
+    images = []
+    for i in numpy.linspace(env.action_space.low[0], env.action_space.high[0], 10):
+        obs = env.reset()
+        images.append(obs[0])
+        # obs, reward, done, info = env.step(env.action_space.sample())
+        obs, reward, done, info = env.step(numpy.array(i))
+        print(reward, info["rewards"], info["action"])
