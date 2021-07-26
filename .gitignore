@@ -1,6 +1,7 @@
 # user-defined
 /tmp*
 .microscope_cache.pkl
+/results
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
