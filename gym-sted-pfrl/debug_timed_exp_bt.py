@@ -205,7 +205,7 @@ def main():
             eval_interval=args.eval_interval,
             train_max_episode_len=timestep_limit,
         )
-    print("yo")
+
 # """
 
 if __name__ == "__main__":
