@@ -1,0 +1,186 @@
+commit b5561b288a42a64273a292a3ffc46b2fe65ca093
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Mon Jul 19 13:47:58 2021 -0400
+
+    removed debugging prints
+
+commit b1a4da626b95caa3429de741ea22364d2c87c3ee
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Mon Jul 19 12:57:56 2021 -0400
+
+    working (?) 1st version of the debugging gym for a timed exp where the goal is to bleach everything
+
+commit 55a745fc9319e23c42f24f6e75b5d779cda1b85f
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Thu Jul 15 16:02:02 2021 -0400
+
+    fixed the init so the exp can launch :)
+
+commit 4190f5243f4fc3f7ab945e8991b579f7153440d5
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Thu Jul 15 15:53:17 2021 -0400
+
+    added test file
+
+commit dcd48da38b0f7e4149e217b49d097cef9146df6d
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Thu Jul 15 15:52:24 2021 -0400
+
+    finna try to bleach stuff in a timed exp
+
+commit e914e1d3333453c815f59b25fdbbd0d81577bb31
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Thu Jul 15 10:35:45 2021 -0400
+
+    working on debugging gym for STED timed exp where the goal is to bleach everything. Currently questioning what I need in the env
+
+commit 81a9f7207948717b5a43004c381cf06988517794
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Wed Jul 14 16:51:24 2021 -0400
+
+    started working on a debugging timed exp, no idea what I'm doing tbh
+
+commit b8be93238c4ec85d10c2533fc0d616ebda329041
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Wed Jul 14 15:29:52 2021 -0400
+
+    trying to do a debugging script that will learn to bleach the whole datamap over the timed exp
+
+commit 9c1a6ad62cd6b0e7870a6c583de24cc27baffb34
+Merge: b2afa9a 91041cf
+Author: antho214 <34163910+antho214@users.noreply.github.com>
+Date:   Wed Jul 7 08:26:34 2021 -0400
+
+    Merge pull request #2 from FLClab/debug-env
+    
+    Debug env
+
+commit 91041cfdc27f76623435d96c309bf9998a480d08
+Author: Anthony <anthonybilodeau214@gmail.com>
+Date:   Wed Jul 7 08:24:38 2021 -0400
+
+    modified debug env resolution + snr;
+
+commit 0bdf5c5a58cfc1b4ad6202b6815e93e78516bc8b
+Author: Anthony <anthonybilodeau214@gmail.com>
+Date:   Wed Jul 7 07:48:41 2021 -0400
+
+    modified defaults for debugResolutionSNR
+
+commit c18e56729521691eb9c7768863594960eb10a7b1
+Author: Anthony <anthonybilodeau214@gmail.com>
+Date:   Wed Jul 7 07:26:43 2021 -0400
+
+    modified envs;
+
+commit 466e720d29b4286c92138f9c9f2842a8b4e7b49a
+Merge: d8463b5 b2afa9a
+Author: Anthony <anthonybilodeau214@gmail.com>
+Date:   Wed Jul 7 07:19:23 2021 -0400
+
+    Merge branch 'main' of github.com:FLClab/gym-sted into debug-env
+
+commit d8463b5cb41753aa9577e11610937c979c539e2e
+Author: Anthony <anthonybilodeau214@gmail.com>
+Date:   Wed Jul 7 07:17:23 2021 -0400
+
+    moved debug env to their own folder;
+
+commit b2afa9a308def52fb521fd29340fd5cfefa45611
+Merge: ea650e7 31c22fd
+Author: bturc <48843063+bturc@users.noreply.github.com>
+Date:   Wed Jul 7 07:11:24 2021 -0400
+
+    Merge pull request #1 from FLClab/synapse-nanodomains
+    
+    Synapse nanodomains
+
+commit 31c22fd5e71238742b9de5bcfa4ef7bbdd63c3c6
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Wed Jul 7 07:09:57 2021 -0400
+
+    changed default gpu requirements to none
+
+commit 6fdca5a853ee7d5d24aad240f1371f67c6490ec9
+Author: Anthony <anthonybilodeau214@gmail.com>
+Date:   Tue Jul 6 06:54:40 2021 -0400
+
+    modified readme and setup;
+
+commit 317463a9ca3fae5b968820d96a1324196dc4765a
+Author: Anthony <anthonybilodeau214@gmail.com>
+Date:   Tue Jul 6 06:21:24 2021 -0400
+
+    modified default debug env max step limit
+
+commit 18553cd8b2f403cecd3dc1131b1d34f25dbc8194
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Thu Jul 1 14:44:07 2021 -0400
+
+    updated readme;
+
+commit 491fb276423f5efad78dc6ae9930efd009d0c340
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Thu Jul 1 14:16:13 2021 -0400
+
+    added a STEDdebug gym;
+
+commit 2fed591ae5f21201abb14562613d7a447bcf6e1e
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Thu Jul 1 13:12:31 2021 -0400
+
+    made synapse generation always the same for testing purposes;
+
+commit 6554fda53c1e1fd8105cfdb1aa1d9503b49ffdb0
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Thu Jul 1 12:57:58 2021 -0400
+
+    The current implementation is (kind of) working;
+
+commit b8ddf008574493f703f4985d3d1e22424dda193f
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Thu Jul 1 11:37:20 2021 -0400
+
+    modified README; updated envs for baselines; updated example;
+
+commit 7fbce908979ace9b7cffff1d000cc626267af92f
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Thu Jul 1 10:47:26 2021 -0400
+
+    added bounded rewards and MO reward;
+
+commit 253e3ec6faf04c4f416aded7a79faeb20039bbbe
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Thu Jul 1 10:41:41 2021 -0400
+
+    added synase generation in gym;
+
+commit ea650e7fcab8b940c06ab5ddbea62a32e8293e2f
+Author: Benoit Turcotte <benoiturcotte@gmail.com>
+Date:   Tue Jun 22 08:38:48 2021 -0400
+
+    Removed some dependecies to DyMIN and Experiment classes
+
+commit 4308ee3796e58dbfad7205842984c4304e0e9da8
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Mon Jun 21 09:28:56 2021 -0400
+
+    removed dependancies from banditopt; created an example.py file;
+
+commit 02ecc1bedd032a4f3fe06078334648ac2b48a179
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Wed Jun 9 07:12:27 2021 -0400
+
+    fixed minor bugs;
+
+commit e19806445b6ee38bb43d46e9fc4b0e167b37eaea
+Author: Anthony Bilodeau <anthonybilodeau214@gmail.com>
+Date:   Wed Jun 9 06:14:05 2021 -0400
+
+    created a new gym;
+
+commit a5ed08745618ed13e332aaf4a0ad02b2ccc4f291
+Author: antho214 <34163910+antho214@users.noreply.github.com>
+Date:   Tue Jun 8 10:41:35 2021 +0000
+
+    Initial commit

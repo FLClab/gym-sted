@@ -169,6 +169,23 @@ class MicroscopeGenerator():
 
         return datamap
 
+    def generate_temporal_datamap(self, **kwargs):
+        # jveux tu mettre les params pour créer le tstack ici ou jveux gérer ça direct dans l'env?
+        temporal_datamap_params = kwargs.get("temporal_datamap", {
+            "whole_datamap": kwargs.get("whole_datamap", self.molecules_disposition),
+            "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize)
+        })
+
+        decay_time_us = kwargs.get("decay_time_us", 1000000)
+        # print(decay_time_us)
+        # for now I will create a TestTemporalDmap obj, but eventually this should be a TemporalSynapseDmap obj
+        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
+        temporal_datamap = base.TestTemporalDmap(**temporal_datamap_params)
+        temporal_datamap.set_roi(i_ex, "max")
+        temporal_datamap.create_t_stack_dmap(decay_time_us)
+
+        return temporal_datamap
+
     def generate_params(self, **kwargs):
 
         imaging_params = kwargs.get("imaging", {
