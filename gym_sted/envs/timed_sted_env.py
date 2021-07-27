@@ -13,7 +13,7 @@ from collections import OrderedDict
 
 import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, RecordingQueue, get_foreground
+from gym_sted.utils import SynapseGenerator2, MicroscopeGenerator, RecordingQueue, get_foreground
 from gym_sted.rewards import objectives
 from gym_sted.prefnet import PreferenceArticulator
 
@@ -56,16 +56,22 @@ class timedExpSTEDEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR", "NbNanodomains"]
 
-    def __init__(self, time_quantum_us=1, exp_time_us=500000, actions=["p_sted"],
+    def __init__(self, time_quantum_us=1, exp_time_us=500000, actions={"p_sted": 2},
                  reward_calculator="SumRewardCalculator"):
-        self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
+        self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
-        self.actions = actions
+        self.actions = actions   # devrait tu être un dict à place d'une liste?
+        # self.action_space = spaces.Box(
+        #     low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
+        #     high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
+        #     dtype=numpy.float32
+        # )
         self.action_space = spaces.Box(
-            low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-            high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
+            low=numpy.array([action_spaces[name]["low"] for name in self.actions]),
+            high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
+            shape=(len(self.actions),),
             dtype=numpy.float32
         )
 
@@ -105,6 +111,19 @@ class timedExpSTEDEnv(gym.Env):
         self.seed()
 
     def step(self, action):
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Generates imaging parameters
+        # mon action est un dict ... ?
+        # comment je fait pour m'assurer de l'ordre des retours de l'action ou w/e ?
+        sted_params = self.microscope_generator.generate_params(
+            imaging={
+                "pdt": numpy.ones(self.temporal_datamap.whole_datamap[self.temporal_datamap.roi].shape) * action["pdt"],
+                "p_ex": action["p_ex"],
+                "p_sted": action["p_sted"]  # for now the agent only controls the STED power
+            }
+        )
+
         pass
 
     def reset(self):
@@ -135,7 +154,8 @@ class timedExpSTEDEnv(gym.Env):
         self.temporal_experiment = pysted.base.TemporalExperiment(self.clock, self.microscope, self.temporal_datamap,
                                                                   self.exp_time_us, bleach=True)
 
-        return self.state.to_array()   # I think this is how I need to return it to ensure it can go through the nn
+        # I think this is how I need to return it to ensure the right shape so it can go through the nn
+        return numpy.transpose(self.state.to_array(), (1, 2, 0))
 
 
 
@@ -153,5 +173,9 @@ class timedExpSTEDEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    xd = timedExpSTEDEnv()
-    xd.reset()
+    env = timedExpSTEDEnv(actions={"pdt": 0, "p_ex": 1, "p_sted": 2})
+    state = env.reset()
+    print(state.shape)
+    print(env.actions)
+    print(env.action_space)
+    print(env.action_space.low)
