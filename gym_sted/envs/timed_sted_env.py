@@ -5,6 +5,7 @@ import random
 import os
 import queue
 
+import pysted.base
 from gym import error, spaces, utils
 from gym.utils import seeding
 from matplotlib import pyplot
@@ -117,11 +118,6 @@ class timedExpSTEDEnv(gym.Env):
             }
         )
 
-        # rendu à créer mon self.state
-        # devrait être une Q des 4 dernières acqs
-        # regarder si y'a des Q dans pfrl, sinon utiliser ce que j'ai vu sur le stack overflow :
-        # https://stackoverflow.com/questions/42771110/fastest-way-to-left-cycle-a-numpy-array-like-pop-push-for-a-queue
-
         conf_params = self.microscope_generator.generate_params()
         first_acq, _, _ = self.microscope.get_signal_and_bleach(
             self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
@@ -135,6 +131,12 @@ class timedExpSTEDEnv(gym.Env):
         start_data = numpy.array(start_data)
         self.state = RecordingQueue(start_data, maxlen=self.q_length, num_sensors=self.dmap_shape)
         # là mon state c'est un Q object, est-ce que c'est good? pour les passer à mes nn? idk?
+
+        self.temporal_experiment = pysted.base.TemporalExperiment(self.clock, self.microscope, self.temporal_datamap,
+                                                                  self.exp_time_us, bleach=True)
+
+        return self.state.to_array()   # I think this is how I need to return it to ensure it can go through the nn
+
 
 
 
