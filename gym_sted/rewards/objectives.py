@@ -12,6 +12,7 @@ import warnings
 from scipy.ndimage import gaussian_filter
 from scipy import optimize
 from skimage.transform import resize
+from skimage.feature import peak_local_max
 from sklearn.metrics import mean_squared_error
 
 class Objective(ABC):
@@ -344,3 +345,37 @@ class Squirrel(Objective):
         Convolves an image with the given parameters
         """
         return gaussian_filter(img * alpha + beta, sigma=sigma)
+
+class NumberNanodomains():
+    def __init__(self):
+        # Do I need to inherit from the Objective class? this reward objective seems different from the others
+        self.label = "Nb Nanodomains"
+        self.select_optimal = None   # not sure what to put here
+
+    def evaluate(self, latest_acq, datamap):
+        """
+        Really unsure how I'm supposed to do this,
+        for now I  will pass the latest acquisition as input as well as the datamap
+        the datamap should have the real number of nanodomains as an attribute (VERIFY THIS)
+        I will do thresholding on the latest acq as the agent's guess to the number of nd
+        ???
+        """
+        # for this exp the datamap has to be a TemporalSynapseDmap object, so I can get the number of nanodomains
+        n_nanodomains_gt = len(datamap.synapse.nanodomains)
+
+        # for the agent's guess, I will do a thresholding thing for now, but I'm unsure if this is truly how I will want
+        # to proceed. Maybe train a NN ? ??? ?
+        first_peak_id_coord = peak_local_max(latest_acq, min_distance=2)
+        second_peak_id_coord = []
+        for coord in first_peak_id_coord:
+            if latest_acq[coord[0], coord[1]] >= 0.5 * numpy.max(latest_acq):
+                second_peak_id_coord.append((coord[0], coord[1]))
+
+        n_nanodomains_agent_guess = len(second_peak_id_coord)
+
+        # now I have the ground truth and the agent's guess, how do I want to compute the reward?
+        # I think doing rwrd = 1 / (abs(guess - gt) + 1) is a good idea
+        # hmmmmmmm jpense que ici dans objective je devrais juste computer le nb de nd que l'agent guess (thresholding)
+        # et le calcul de la reward devra
+        reward = 1 / (numpy.abs(n_nanodomains_agent_guess - n_nanodomains_gt) + 1)
+        return reward
