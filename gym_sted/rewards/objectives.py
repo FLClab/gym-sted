@@ -364,7 +364,7 @@ class NumberNanodomains():
         n_nanodomains_gt = len(datamap.synapse.nanodomains)
 
         # for the agent's guess, I will do a thresholding thing for now, but I'm unsure if this is truly how I will want
-        # to proceed. Maybe train a NN ? ??? ?
+        # to proceed.
         first_peak_id_coord = peak_local_max(latest_acq, min_distance=2)
         second_peak_id_coord = []
         for coord in first_peak_id_coord:

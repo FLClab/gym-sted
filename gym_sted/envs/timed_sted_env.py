@@ -3,6 +3,7 @@ import gym
 import numpy
 import random
 import os
+import queue
 
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -11,7 +12,7 @@ from collections import OrderedDict
 
 import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, RecordingQueue, get_foreground
 from gym_sted.rewards import objectives
 from gym_sted.prefnet import PreferenceArticulator
 
@@ -23,19 +24,19 @@ obj_dict = {
     "Bleach" : objectives.Bleach(),
     "Resolution" : objectives.Resolution(pixelsize=20e-9),
     "Squirrel" : objectives.Squirrel(),
-    "Nb Nanodomains" : objectives.NumberNanodomains()
+    "NbNanodomains" : objectives.NumberNanodomains()
 }
 bounds_dict = {
     "SNR" : {"min" : 0.20, "max" : numpy.inf},
     "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
     "Resolution" : {"min" : 0, "max" : 100},
-    "Nb Nanodomains" : {"min" : 0, "max" : numpy.inf}
+    "NbNanodomains" : {"min" : 0, "max" : numpy.inf}
 }
 scales_dict = {
     "SNR" : {"min" : 0, "max" : 1},
     "Bleach" : {"min" : 0, "max" : 1},
     "Resolution" : {"min" : 40, "max" : 180},
-    "Nb Nanodomains" : {"min" : 0, "max" : 1}   # ???
+    "NbNanodomains" : {"min" : 0, "max" : 1}   # ???
 }
 action_spaces = {
     # changed p_sted low to 0 as I want to 0. as I want to take confocals if the flash is not yet happening
@@ -52,7 +53,7 @@ class timedExpSTEDEnv(gym.Env):
         The action space here is a selection of the p_ex, p_sted and pdt values (?)
     """
     metadata = {'render.modes': ['human']}
-    obj_names = ["Resolution", "Bleach", "SNR", "Nb Nanodomains"]
+    obj_names = ["Resolution", "Bleach", "SNR", "NbNanodomains"]
 
     def __init__(self, time_quantum_us=1, exp_time_us=500000, actions=["p_sted"],
                  reward_calculator="SumRewardCalculator"):
@@ -67,15 +68,15 @@ class timedExpSTEDEnv(gym.Env):
             dtype=numpy.float32
         )
 
-        dmap_shape = (20, 20)
-        max_episode_steps = int(numpy.ceil(exp_time_us /
-                                           (dmap_shape[0] * dmap_shape[1] * action_spaces["pdt"]["low"] * 1e6)))
+        self.dmap_shape = (64, 64)
+        self.q_length = 4
+        self.max_episode_steps = int(numpy.ceil(exp_time_us /
+                                                (self.dmap_shape[0] * self.dmap_shape[1] * action_spaces["pdt"]["low"] * 1e6)))
         # since this is a temporal experiment, I think it would be relevant to have the last 4 acquisitions as the
         # observation of the state. Need to figure out how to do a first in first out thing for this
-        self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2 ** 16, shape=(dmap_shape[0], dmap_shape[1], 4), dtype=numpy.uint16),
-            spaces.Box(0, 1, shape=(max_episode_steps,), dtype=numpy.float32)
-        ))
+        self.observation_space = spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
+                                            dtype=numpy.uint16)
+
 
         self.state = None
         self.initial_count = None
@@ -116,8 +117,25 @@ class timedExpSTEDEnv(gym.Env):
             }
         )
 
-        pyplot.imshow(self.temporal_datamap.whole_datamap[self.temporal_datamap.roi])
-        pyplot.show()
+        # rendu à créer mon self.state
+        # devrait être une Q des 4 dernières acqs
+        # regarder si y'a des Q dans pfrl, sinon utiliser ce que j'ai vu sur le stack overflow :
+        # https://stackoverflow.com/questions/42771110/fastest-way-to-left-cycle-a-numpy-array-like-pop-push-for-a-queue
+
+        conf_params = self.microscope_generator.generate_params()
+        first_acq, _, _ = self.microscope.get_signal_and_bleach(
+            self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
+        )
+        # for the state, fill a queue with the first observation,
+        # If I only add it once to the Q the head will point to an array of zeros until the Q is filled,
+        # which is not what I want
+        start_data = []
+        for i in range(self.q_length):
+            start_data.append(first_acq)
+        start_data = numpy.array(start_data)
+        self.state = RecordingQueue(start_data, maxlen=self.q_length, num_sensors=self.dmap_shape)
+        # là mon state c'est un Q object, est-ce que c'est good? pour les passer à mes nn? idk?
+
 
 
     def render(self, info, mode="'human"):
