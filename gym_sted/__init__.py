@@ -37,7 +37,27 @@ register(
 
 # Ranking environment
 register(
-    id="STEDranking-v0",
+    id="STEDranking-easy-v0",
+    entry_point="gym_sted.envs:rankSTEDEnv",
+    max_episode_steps=10,
+    kwargs={
+        "reward_calculator" : "MultiplyRewardCalculator",
+        "actions" : ["p_sted"]
+    }
+)
+
+register(
+    id="STEDranking-easy-v1",
+    entry_point="gym_sted.envs:rankSTEDEnv",
+    max_episode_steps=10,
+    kwargs={
+        "reward_calculator" : "MultiplyRewardCalculator",
+        "actions" : ["p_sted", "p_ex", "pdt"]
+    }
+)
+
+register(
+    id="STEDranking-hard-v0",
     entry_point="gym_sted.envs:rankSTEDEnv",
     max_episode_steps=10,
     kwargs={
@@ -47,7 +67,7 @@ register(
 )
 
 register(
-    id="STEDranking-v1",
+    id="STEDranking-hard-v1",
     entry_point="gym_sted.envs:rankSTEDEnv",
     max_episode_steps=10,
     kwargs={

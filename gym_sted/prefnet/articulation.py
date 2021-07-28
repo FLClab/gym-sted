@@ -38,5 +38,5 @@ class PreferenceArticulator:
         scores = self.model.predict(thetas)
 
         # Sorts the scores
-        sorted_scores = numpy.argsort(scores)
+        sorted_scores = numpy.argsort(scores.ravel())
         return sorted_scores[-1], sorted_scores
