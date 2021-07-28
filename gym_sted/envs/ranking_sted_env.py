@@ -125,7 +125,7 @@ class rankSTEDEnv(gym.Env):
 
             done = False
             reward = 1
-            rewards = numpy.zeros((len(self.obj_names, )))
+            rewards = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
             self.num_request_left -= 1
 
             if len(self.cummulated_rewards["rewards"]) > 0:
@@ -137,11 +137,14 @@ class rankSTEDEnv(gym.Env):
             reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
             rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
-            # Here reward should be 1 if reward is >= expert choice else it should be 0
-            # We do not give a reward if all rewards are 0
-            if (self.current_articulation != -1) and (reward > 0):
-                r = int(reward >= self.cummulated_rewards["reward"][self.current_articulation])
-                reward += r
+            # Reward is proportionnal to the ranked position of the last image
+            articulation, sorted_indices = self.preference_articulation.articulate(
+                self.cummulated_rewards["rewards"] + [rewards]
+            )
+            index = numpy.argmax(sorted_indices).item()
+            # Reward is given by the position in the sorting
+            reward += (index + 1) / len(sorted_indices)
+
             done = True
 
         else:
@@ -280,7 +283,7 @@ if __name__ == "__main__":
 
     from gym.envs.registration import EnvSpec
 
-    env = rankSTEDEnv(reward_calculator="BoundedRewardCalculator", actions=["p_sted"])
+    env = rankSTEDEnv(reward_calculator="MultiplyRewardCalculator", actions=["p_sted", "p_ex", "pdt"])
     env.spec = EnvSpec("STEDranking-v0", max_episode_steps=10)
     for i in range(10):
         obs = env.reset()
