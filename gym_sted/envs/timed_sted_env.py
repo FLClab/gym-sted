@@ -57,7 +57,8 @@ class timedExpSTEDEnv(gym.Env):
 
     def __init__(self, time_quantum_us=1, exp_time_us=500000, actions=["p_sted"],
                  reward_calculator="SumRewardCalculator"):
-        self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
+        # self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
+        self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=5, seed=42)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
@@ -110,7 +111,8 @@ class timedExpSTEDEnv(gym.Env):
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
             imaging={
-                name: action[self.actions.index(name)]
+                name: action[self.actions.index(name)] * numpy.ones(self.dmap_shape) if name == "pdt"
+                else action[self.actions.index(name)]
                 if name in self.actions else getattr(defaults, name.upper())
                 for name in ["pdt", "p_ex", "p_sted"]
             }
@@ -193,21 +195,42 @@ class timedExpSTEDEnv(gym.Env):
         self.state = RecordingQueue(start_data, maxlen=self.q_length, num_sensors=self.dmap_shape)
         # là mon state c'est un Q object, est-ce que c'est good? pour les passer à mes nn? idk?
 
+        self.clock = pysted.base.Clock(self.time_quantum_us)
         self.temporal_experiment = pysted.base.TemporalExperiment(self.clock, self.microscope, self.temporal_datamap,
                                                                   self.exp_time_us, bleach=True)
 
         # I think this is how I need to return it to ensure the right shape so it can go through the nn
         return numpy.transpose(self.state.to_array(), (1, 2, 0))
 
+    def render(self, info, mode='human'):
+        """
+        unsure when this will be used
+        Renders the environment
 
+        :param info: A `dict` of data
+        :param mode: A `str` of the available mode
+        """
+        fig, axes = pyplot.subplots(1, 3, figsize=(10, 3), sharey=True, sharex=True)
 
+        axes[0].imshow(info["conf1"])
+        axes[0].set_title(f"Datamap roi")
 
-    def render(self, info, mode="'human"):
-        pass
+        axes[1].imshow(info["bleached"]["base"][self.temporal_datamap.roi])
+        axes[1].set_title(f"Bleached datamap")
+
+        axes[2].imshow(info["sted_image"])
+        axes[2].set_title(f"Acquired signal (photons)")
+
+        pyplot.show(block=True)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+
+    def update_(self, **kwargs):
+        # unsure when this will be used
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def close(self):
         return None
@@ -215,6 +238,26 @@ class timedExpSTEDEnv(gym.Env):
 
 
 if __name__ == "__main__":
+    from matplotlib import pyplot as plt
+
     env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"])
     state = env.reset()
-    env.step([69e-6, 4.2e-6, 1337e-100])
+    # for i in range(env.temporal_datamap.flash_tstack.shape[0]):
+    #     env.temporal_datamap.update_whole_datamap(i)
+    #     plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+    #     plt.title(f"max = {env.temporal_datamap.whole_datamap[env.temporal_datamap.roi].max()}")
+    #     plt.show()
+    # exit()
+    obs, reward, done, info = env.step([10, 10, 10])   # max eerything :)
+    # print(f"obs.shape = {obs.shape}")
+    # print(f"reward = {reward}")
+    # print(f"done = {done}")
+    # print(f"info = {info}")
+    print(f"flash tstep = {env.temporal_datamap.sub_datamaps_idx_dict}")
+    print(f"clock.current_time = {env.clock.current_time}")
+    print(f"temporal_exp.flash_tstep = {env.temporal_experiment.flash_tstep}")
+    # je m'attends à ce que les 3 premières images soient la même confocale, et la dernière soit une STED :)
+    for t in range(obs.shape[-1]):
+        plt.imshow(obs[:, :, t])
+        plt.title(f"t = {t}")
+        plt.show()

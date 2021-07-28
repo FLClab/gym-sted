@@ -87,8 +87,10 @@ class Signal_Ratio(Objective):
 
         """
         if numpy.any(sted_fg):
-            foreground = numpy.percentile(sted_stack[0][sted_fg], self.percentile)
-            background = numpy.mean(sted_stack[0][numpy.invert(sted_fg)])
+            # foreground = numpy.percentile(sted_stack[0][sted_fg], self.percentile)
+            # background = numpy.mean(sted_stack[0][numpy.invert(sted_fg)])
+            foreground = numpy.percentile(sted_stack[sted_fg], self.percentile)
+            background = numpy.mean(sted_stack[numpy.invert(sted_fg)])
             ratio = (foreground - background) / numpy.percentile(confocal_init[confocal_fg], self.percentile)
             if ratio < 0:
                 return None
@@ -120,7 +122,8 @@ class Resolution(Objective):
     def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            res = self.decorrelation(image=sted_stack[0]) * self.pixelsize / 1e-9
+            # res = self.decorrelation(image=sted_stack[0]) * self.pixelsize / 1e-9
+            res = self.decorrelation(image=sted_stack) * self.pixelsize / 1e-9
         if res > self.res_cap:
             res = self.res_cap
         return res
@@ -307,7 +310,9 @@ class NumberNanodomains(Objective):
         # for the agent's guess, I will do a thresholding thing for now, but I'm unsure if this is truly how I will want
         # to proceed.
         # *** THIS ASSUMES THE 0TH ELT OF STED_STACK IS THE MOST RECENT, NEED TO VALIDATE THIS ***
-        peak_id_coord = peak_local_max(sted_stack[0], min_distance=2, threshold_rel=0.5)
+        # peak_id_coord = peak_local_max(sted_stack[0], min_distance=2, threshold_rel=0.5)
+        # I only pass 1 sted image so its not really a stack :)
+        peak_id_coord = peak_local_max(sted_stack, min_distance=2, threshold_rel=0.5)
 
         n_nanodomains_agent_guess = len(peak_id_coord)
 
