@@ -41,7 +41,7 @@ scales_dict = {
 action_spaces = {
     # changed p_sted low to 0 as I want to 0. as I want to take confocals if the flash is not yet happening
     "p_sted" : {"low" : 0., "high" : 5.0e-3},
-    "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},   # jveux tu lui laisser prendre un p_ex = 0 ? ferait la wait action...
+    "p_ex" : {"low" : 0., "high" : 5.0e-6},   # jveux tu lui laisser prendre un p_ex = 0 ? ferait la wait action...
     "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
 }
 
@@ -56,7 +56,7 @@ class timedExpSTEDEnv(gym.Env):
     obj_names = ["Resolution", "Bleach", "SNR", "NbNanodomains"]
 
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
-                 reward_calculator="SumRewardCalculator"):
+                 reward_calculator="MultiplyRewardCalculator"):
         # self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
         self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=5, seed=42)
         self.microscope_generator = MicroscopeGenerator()
@@ -244,22 +244,7 @@ if __name__ == "__main__":
 
     env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"])
     state = env.reset()
-    # for i in range(env.temporal_datamap.flash_tstack.shape[0]):
-    #     env.temporal_datamap.update_whole_datamap(i)
-    #     plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
-    #     plt.title(f"max = {env.temporal_datamap.whole_datamap[env.temporal_datamap.roi].max()}")
-    #     plt.show()
-    # exit()
-    obs, reward, done, info = env.step([10, 10, 10])   # max eerything :)
-    # print(f"obs.shape = {obs.shape}")
-    # print(f"reward = {reward}")
-    # print(f"done = {done}")
-    # print(f"info = {info}")
-    print(f"flash tstep = {env.temporal_datamap.sub_datamaps_idx_dict}")
-    print(f"clock.current_time = {env.clock.current_time}")
-    print(f"temporal_exp.flash_tstep = {env.temporal_experiment.flash_tstep}")
-    # je m'attends à ce que les 3 premières images soient la même confocale, et la dernière soit une STED :)
-    for t in range(obs.shape[-1]):
-        plt.imshow(obs[:, :, t])
-        plt.title(f"t = {t}")
-        plt.show()
+    env.clock.current_time = 500000
+    obs, reward, done, info = env.step([10, 10, 0.00005])
+    print(f"info = {info}")
+    print(f"reward = {reward}")
