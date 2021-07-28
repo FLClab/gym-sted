@@ -14,18 +14,17 @@ from collections import OrderedDict
 import gym_sted
 from gym_sted import rewards, defaults
 from gym_sted.utils import SynapseGenerator2, MicroscopeGenerator, RecordingQueue, get_foreground
-from gym_sted.rewards import objectives
+from gym_sted.rewards import objectives_timed, rewards_timed
 from gym_sted.prefnet import PreferenceArticulator
 
 # I will copy the values straight from Anthony's ranking_sted_env, need to think about what values
 # I actually want to use
 
 obj_dict = {
-    "SNR" : objectives.Signal_Ratio(75),
-    "Bleach" : objectives.Bleach(),
-    "Resolution" : objectives.Resolution(pixelsize=20e-9),
-    "Squirrel" : objectives.Squirrel(),
-    "NbNanodomains" : objectives.NumberNanodomains()
+    "SNR" : objectives_timed.Signal_Ratio(75),
+    "Bleach" : objectives_timed.Bleach(),
+    "Resolution" : objectives_timed.Resolution(pixelsize=20e-9),
+    "NbNanodomains" : objectives_timed.NumberNanodomains()
 }
 bounds_dict = {
     "SNR" : {"min" : 0.20, "max" : numpy.inf},
@@ -62,12 +61,7 @@ class timedExpSTEDEnv(gym.Env):
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
-        self.actions = actions   # devrait tu être un dict à place d'une liste?
-        # self.action_space = spaces.Box(
-        #     low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-        #     high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
-        #     dtype=numpy.float32
-        # )
+        self.actions = actions
         self.action_space = spaces.Box(
             low=numpy.array([action_spaces[name]["low"] for name in self.actions]),
             high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
@@ -96,8 +90,8 @@ class timedExpSTEDEnv(gym.Env):
         objs = OrderedDict({obj_name: obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name: bounds_dict[obj_name] for obj_name in self.obj_names})
         scales = OrderedDict({obj_name: scales_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = getattr(rewards, reward_calculator)(objs, bounds=bounds, scales=scales)
-        self._reward_calculator = rewards.MORewardCalculator(objs, bounds=bounds, scales=scales)
+        self.reward_calculator = getattr(rewards_timed, reward_calculator)(objs, bounds=bounds, scales=scales)
+        self._reward_calculator = rewards_timed.MORewardCalculator(objs, bounds=bounds, scales=scales)
 
         self.temporal_datamap = None
         self.viewer = None
@@ -121,18 +115,58 @@ class timedExpSTEDEnv(gym.Env):
                 for name in ["pdt", "p_ex", "p_sted"]
             }
         )
+        conf_params = self.microscope_generator.generate_params()
+
+        # Acquire confocal image
+        conf1, bleached, _ = self.microscope.get_signal_and_bleach(
+            self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
+        )
+
+        n_molecs_init = self.temporal_datamap.base_datamap.sum()
 
         # Acquire a STED image (with all the time wizardy bullshit)
         sted_image, bleached = self.temporal_experiment.play_action(**sted_params)
 
-        # need to figure out how I will compute the rewards, as it is different from the way Anthony computes them
-        # my 1st version of this gym will also use the number of nanodomains in the reward calculation, but an other
-        # version could be tried without using it in the reward (I would still need to figure out how many nanodomains
-        # can be spotted ...)
-        # reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-        # rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        n_molecs_post = self.temporal_datamap.base_datamap.sum()
 
-        pass
+        # foreground on confocal image
+        fg_c = get_foreground(conf1)
+        # foreground on sted image
+        if numpy.any(sted_image):
+            fg_s = get_foreground(sted_image)
+        else:
+            fg_s = numpy.ones_like(fg_c)
+        # remove STED foreground points not in confocal foreground, if any
+        fg_s *= fg_c
+
+        # this is the scalarized reward
+        reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                 self.temporal_datamap)
+        # this is the vector of individual rewards for individual objectives
+        rewards = self._reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                   self.temporal_datamap)
+
+        done = self.temporal_experiment.clock.current_time >= self.exp_time_us
+
+        info = {
+            "action": action,
+            "bleached": bleached,
+            "sted_image": sted_image,
+            "conf1": conf1,
+            "fg_c": fg_c,
+            "fg_s": fg_s,
+            "rewards": rewards,
+            "pdt": action[self.actions.index("pdt")],
+            "p_ex": action[self.actions.index("p_ex")],
+            "p_sted": action[self.actions.index("p_sted")]
+        }
+
+        # faut que j'update mon state avec ma plus récente acq :)
+        self.state.enqueue(sted_image)
+        observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
+
+        # ~!* RETURN DLA SCRAP ICITTE *!~
+        return observation, reward, done, info
 
     def reset(self):
         synapse = self.synapse_generator.generate()
