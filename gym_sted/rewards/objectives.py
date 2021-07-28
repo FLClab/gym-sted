@@ -365,13 +365,9 @@ class NumberNanodomains():
 
         # for the agent's guess, I will do a thresholding thing for now, but I'm unsure if this is truly how I will want
         # to proceed.
-        first_peak_id_coord = peak_local_max(latest_acq, min_distance=2)
-        second_peak_id_coord = []
-        for coord in first_peak_id_coord:
-            if latest_acq[coord[0], coord[1]] >= 0.5 * numpy.max(latest_acq):
-                second_peak_id_coord.append((coord[0], coord[1]))
+        peak_id_coord = peak_local_max(latest_acq, min_distance=2, threshold_rel=0.5)
 
-        n_nanodomains_agent_guess = len(second_peak_id_coord)
+        n_nanodomains_agent_guess = len(peak_id_coord)
 
         # now I have the ground truth and the agent's guess, how do I want to compute the reward?
         # I think doing rwrd = 1 / (abs(guess - gt) + 1) is a good idea

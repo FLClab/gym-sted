@@ -56,7 +56,7 @@ class timedExpSTEDEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR", "NbNanodomains"]
 
-    def __init__(self, time_quantum_us=1, exp_time_us=500000, actions={"p_sted": 2},
+    def __init__(self, time_quantum_us=1, exp_time_us=500000, actions=["p_sted"],
                  reward_calculator="SumRewardCalculator"):
         self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
         self.microscope_generator = MicroscopeGenerator()
@@ -114,15 +114,23 @@ class timedExpSTEDEnv(gym.Env):
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
         # Generates imaging parameters
-        # mon action est un dict ... ?
-        # comment je fait pour m'assurer de l'ordre des retours de l'action ou w/e ?
         sted_params = self.microscope_generator.generate_params(
             imaging={
-                "pdt": numpy.ones(self.temporal_datamap.whole_datamap[self.temporal_datamap.roi].shape) * action["pdt"],
-                "p_ex": action["p_ex"],
-                "p_sted": action["p_sted"]  # for now the agent only controls the STED power
+                name: action[self.actions.index(name)]
+                if name in self.actions else getattr(defaults, name.upper())
+                for name in ["pdt", "p_ex", "p_sted"]
             }
         )
+
+        # Acquire a STED image (with all the time wizardy bullshit)
+        sted_image, bleached = self.temporal_experiment.play_action(**sted_params)
+
+        # need to figure out how I will compute the rewards, as it is different from the way Anthony computes them
+        # my 1st version of this gym will also use the number of nanodomains in the reward calculation, but an other
+        # version could be tried without using it in the reward (I would still need to figure out how many nanodomains
+        # can be spotted ...)
+        # reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        # rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         pass
 
@@ -173,9 +181,6 @@ class timedExpSTEDEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    env = timedExpSTEDEnv(actions={"pdt": 0, "p_ex": 1, "p_sted": 2})
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"])
     state = env.reset()
-    print(state.shape)
-    print(env.actions)
-    print(env.action_space)
-    print(env.action_space.low)
+    env.step([69e-6, 4.2e-6, 1337e-100])
