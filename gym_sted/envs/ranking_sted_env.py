@@ -129,7 +129,7 @@ class rankSTEDEnv(gym.Env):
             self.num_request_left -= 1
 
             if len(self.cummulated_rewards["rewards"]) > 0:
-                self.current_articulation = self.preference_articulation.articulate(self.cummulated_rewards["rewards"])
+                self.current_articulation, _ = self.preference_articulation.articulate(self.cummulated_rewards["rewards"])
 
         elif main_action == 2:
             # Acquire final image
