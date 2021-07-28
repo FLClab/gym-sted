@@ -55,7 +55,7 @@ class timedExpSTEDEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR", "NbNanodomains"]
 
-    def __init__(self, time_quantum_us=1, exp_time_us=500000, actions=["p_sted"],
+    def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
                  reward_calculator="SumRewardCalculator"):
         # self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
         self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=5, seed=42)
@@ -178,7 +178,9 @@ class timedExpSTEDEnv(gym.Env):
                 "whole_datamap" : synapse.frame,
                 "datamap_pixelsize" : self.microscope_generator.pixelsize,
                 "synapse_obj": synapse
-            }
+            },
+            decay_time_us=self.exp_time_us,
+            n_decay_steps=20
         )
 
         conf_params = self.microscope_generator.generate_params()
