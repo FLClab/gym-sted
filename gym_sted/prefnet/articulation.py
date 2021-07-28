@@ -26,6 +26,7 @@ class PreferenceArticulator:
         :param thetas: A `list` of rewards
 
         :returns : An `int` of the optimal choice
+                   An `numpy.nd`
         """
         # Converts to numpy ndarray and resize
         thetas = numpy.array(thetas)
@@ -36,4 +37,6 @@ class PreferenceArticulator:
         # Predicts the objectives
         scores = self.model.predict(thetas)
 
-        return numpy.argmax(scores)
+        # Sorts the scores
+        sorted_scores = numpy.argsort(scores)
+        return sorted_scores[-1], sorted_scores
