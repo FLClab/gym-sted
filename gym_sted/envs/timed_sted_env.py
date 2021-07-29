@@ -155,7 +155,7 @@ class timedExpSTEDEnv(gym.Env):
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
-            return observation, reward, done, info
+            return observation, reward[0], done, info
 
         else:
             # case where the agent can image at least one pixel given the time left in the exp and selected pdt
