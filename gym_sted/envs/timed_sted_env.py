@@ -117,7 +117,7 @@ class timedExpSTEDEnv(gym.Env):
                 for name in ["pdt", "p_ex", "p_sted"]
             }
         )
-        if sted_params["pdt"][0, 0] + self.temporal_experiment.clock.current_time >= self.exp_time_us:
+        if sted_params["pdt"][0, 0] * 1e6 + self.temporal_experiment.clock.current_time >= self.exp_time_us:
             # case where the agent doesnt have the time to image a single pixel given the time left in the experiment
             # and the selected pdt
 
@@ -287,7 +287,7 @@ if __name__ == "__main__":
 
     env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"])
     state = env.reset()
-    env.clock.current_time = 500000
+    env.clock.current_time = 2000000 - 150
     obs, reward, done, info = env.step([10, 10, 0.00005])
     print(f"info = {info}")
     print(f"reward = {reward}")
