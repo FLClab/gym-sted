@@ -76,15 +76,25 @@ class MORewardCalculator(RewardCalculator):
         :returns : A `list` of rewards
         """
         # maybe it would be better to make it a dict instead?
-        return [
-            1 - self.rescale(self.objectives[obj_name].evaluate(sted_stack, confocal_init, sted_fg, confocal_fg,
-                                                                n_molecs_init, n_molecs_post, temporal_datamap),
-                             obj_name)
+        return {
+            obj_name: 1 - self.rescale(self.objectives[obj_name].evaluate(sted_stack, confocal_init, sted_fg,
+                                                                          confocal_fg, n_molecs_init, n_molecs_post,
+                                                                          temporal_datamap),
+                                       obj_name)
             if obj_name != "SNR" and obj_name != "NbNanodomains" else self.rescale(self.objectives[obj_name].evaluate(
                 sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap),
                 obj_name)
             for obj_name in self.objectives.keys()
-        ]
+        }
+        # return [
+        #     1 - self.rescale(self.objectives[obj_name].evaluate(sted_stack, confocal_init, sted_fg, confocal_fg,
+        #                                                         n_molecs_init, n_molecs_post, temporal_datamap),
+        #                      obj_name)
+        #     if obj_name != "SNR" and obj_name != "NbNanodomains" else self.rescale(self.objectives[obj_name].evaluate(
+        #         sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap),
+        #         obj_name)
+        #     for obj_name in self.objectives.keys()
+        # ]
 
     def rescale(self, value, obj_name):
         """
