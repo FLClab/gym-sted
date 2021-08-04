@@ -105,3 +105,50 @@ class timedExpSTEDEnv(gym.Env):
         self.temporal_experiment = None
 
         self.seed()
+
+    def step(self, action):
+        """
+        hmmmm
+        faque là il faudrait que je split ça en 2 actions, une qui serait du "monitoring" pour laquelle je ne compute
+        pas le nb de nanodomaines et la reward associée et une action "d'acquisition" pour laquelle je compute ça.
+        Dans les 2 cas, je veux envoyer le signal de SNR, Bleach, Resolution au NN, mais je veu juste obtenir une
+        reward quand je fais un guess sur le nombre de nanodomaines.
+        hmmmm
+        dont d'abord je devrais regarder comment envoyer le signal des 3 objs au neural net and shit
+        """
+        pass
+
+    def reset(self):
+        synapse = self.synapse_generator.generate()
+
+        self.temporal_datamap = self.microscope_generator.generate_temporal_datamap(
+            temporal_datamap = {
+                "whole_datamap" : synapse.frame,
+                "datamap_pixelsize" : self.microscope_generator.pixelsize,
+                "synapse_obj": synapse
+            },
+            decay_time_us=self.exp_time_us,
+            n_decay_steps=20
+        )
+
+        conf_params = self.microscope_generator.generate_params()
+        first_acq, _, _ = self.microscope.get_signal_and_bleach(
+            self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
+        )
+        # for the state, fill a queue with the first observation,
+        # If I only add it once to the Q the head will point to an array of zeros until the Q is filled,
+        # which is not what I want
+        start_data = []
+        for i in range(self.q_length):
+            start_data.append(first_acq)
+        start_data = numpy.array(start_data)
+        self.state = RecordingQueue(start_data, maxlen=self.q_length, num_sensors=self.dmap_shape)
+        # là mon state c'est un Q object, est-ce que c'est good? pour les passer à mes nn? idk?
+
+        self.clock = pysted.base.Clock(self.time_quantum_us)
+        self.temporal_experiment = pysted.base.TemporalExperiment(self.clock, self.microscope, self.temporal_datamap,
+                                                                  self.exp_time_us, bleach=True,
+                                                                  bleach_mode="proportional")
+
+        # I think this is how I need to return it to ensure the right shape so it can go through the nn
+        return numpy.transpose(self.state.to_array(), (1, 2, 0))

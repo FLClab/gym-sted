@@ -312,7 +312,19 @@ class NumberNanodomains(Objective):
         gt_coords = numpy.asarray(temporal_datamap.synapse.nanodomains_coords)
         guess_coords = peak_local_max(sted_stack, min_distance=threshold, threshold_rel=0.5)
 
-        detector = metrics.CentroidDetectionError(gt_coords, guess_coords, threshold, algorithm="hungarian")
-
-        f1_score = detector.f1_score
+        """
+        problème potentiel :
+        what if je start un acq pendant le flash, capable de bien résoudre les nanodomaines, mais genre au dernier
+        pixel de l'acq (pour un exemple extreme, ça pourrait être plus tôt) ça update les flash et les nanodomaines ne
+        sont plus actifs, ça me donnerait un reward de 0 malgré que les NDs sont biens résolus... hmm
+        --> Will this ever happen tho? le flash ne décroit pas de full bien résolvable à off en un step, donc je pense 
+            que le pire que ça va faire cest que je vais avoir un rwrd de 0 à place de genre 0.1 or something
+        --> Quand même important à garder en tête, pourrais peut-être causer des comportements indésirés, mais pour 
+            l'instant je vais garder cette implem
+        """
+        if temporal_datamap.nanodomains_active_currently:
+            detector = metrics.CentroidDetectionError(gt_coords, guess_coords, threshold, algorithm="hungarian")
+            f1_score = detector.f1_score
+        else:
+            f1_score = 0
         return f1_score
