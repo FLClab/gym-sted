@@ -77,8 +77,13 @@ class timedExpSTEDEnv(gym.Env):
                                                 (self.dmap_shape[0] * self.dmap_shape[1] * action_spaces["pdt"]["low"] * 1e6)))
         # since this is a temporal experiment, I think it would be relevant to have the last 4 acquisitions as the
         # observation of the state. Need to figure out how to do a first in first out thing for this
-        self.observation_space = spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
-                                            dtype=numpy.uint16)
+        # self.observation_space = spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
+        #                                     dtype=numpy.uint16)
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
+                       dtype=numpy.uint16),
+            spaces.Box(0, scales_dict["Resolution"]["max"], shape=(3,), dtype=numpy.float32)
+        ))
 
 
         self.state = None
@@ -116,7 +121,122 @@ class timedExpSTEDEnv(gym.Env):
         hmmmm
         dont d'abord je devrais regarder comment envoyer le signal des 3 objs au neural net and shit
         """
-        pass
+        # Define a sted power under which we are in 'monitoring' mode, over which we are in 'detection' mode
+        p_sted_threshold = 5e-4
+
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # là il faut que je regarde si la puissance sted est under/over le threshold pour décider comment retourner la
+        # reward. Il faut aussi que je regarde l'affaire avec le pdt :)
+
+        # Generates imaging parameters
+        sted_params = self.microscope_generator.generate_params(
+            imaging={
+                name: action[self.actions.index(name)] * numpy.ones(self.dmap_shape) if name == "pdt"
+                else action[self.actions.index(name)]
+                if name in self.actions else getattr(defaults, name.upper())
+                for name in ["pdt", "p_ex", "p_sted"]
+            }
+        )
+        if sted_params["pdt"][0, 0] * 1e6 + self.temporal_experiment.clock.current_time >= self.exp_time_us:
+            # case where the agent doesnt have the time to image a single pixel given the time left in the experiment
+            # and the selected pdt
+
+            # set the sted_image, conf1, fg_c and fg_s to a bunch of zeros,
+            sted_image = numpy.zeros(self.dmap_shape)
+            conf1 = numpy.zeros(self.dmap_shape)
+            fg_c = numpy.zeros(self.dmap_shape)
+            fg_s = numpy.zeros(self.dmap_shape)
+            n_molecs_init = self.temporal_datamap.base_datamap.sum(),
+            n_molecs_post = self.temporal_datamap.base_datamap.sum()
+
+            # this is the scalarized reward
+            reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                     self.temporal_datamap)
+            # this is the vector of individual rewards for individual objectives
+            rewards = self._reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                       self.temporal_datamap)
+
+            done = True
+            info = {
+                "action": action,
+                "bleached": None,  # not sure what to do here, will this cause problems? hope not :)
+                "sted_image": sted_image,
+                "conf1": conf1,
+                "fg_c": fg_c,
+                "fg_s": fg_s,
+                "rewards": rewards,
+                "pdt": action[self.actions.index("pdt")],
+                "p_ex": action[self.actions.index("p_ex")],
+                "p_sted": action[self.actions.index("p_sted")]
+            }
+
+            # faut que j'update mon state avec ma plus récente acq :)
+            self.state.enqueue(sted_image)
+            observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"]])
+
+            # ~!* RETURN DLA SCRAP ICITTE *!~
+            return [observation, objective_vals], reward[0], done, info
+
+        else:
+            # case where the agent can image at least one pixel given the time left in the exp and selected pdt
+
+            # FAUT QUE JE SPLIT ÇA EN 2 CAS, UN POUR LE MONITORING ET UN POUR LE DETECTION
+
+            conf_params = self.microscope_generator.generate_params()
+
+            # Acquire confocal image
+            conf1, bleached, _ = self.microscope.get_signal_and_bleach(
+                self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
+            )
+
+            n_molecs_init = self.temporal_datamap.base_datamap.sum()
+
+            # Acquire a STED image (with all the time wizardy bullshit)
+            sted_image, bleached = self.temporal_experiment.play_action(**sted_params)
+
+            n_molecs_post = self.temporal_datamap.base_datamap.sum()
+
+            # foreground on confocal image
+            fg_c = get_foreground(conf1)
+            # foreground on sted image
+            if numpy.any(sted_image):
+                fg_s = get_foreground(sted_image)
+            else:
+                fg_s = numpy.ones_like(fg_c)
+            # remove STED foreground points not in confocal foreground, if any
+            fg_s *= fg_c
+
+            # this is the scalarized reward
+            reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                     self.temporal_datamap)
+            # this is the vector of individual rewards for individual objectives
+            rewards = self._reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                       self.temporal_datamap)
+
+            done = self.temporal_experiment.clock.current_time >= self.exp_time_us
+
+            info = {
+                "action": action,
+                "bleached": bleached,
+                "sted_image": sted_image,
+                "conf1": conf1,
+                "fg_c": fg_c,
+                "fg_s": fg_s,
+                "rewards": rewards,
+                "pdt": action[self.actions.index("pdt")],
+                "p_ex": action[self.actions.index("p_ex")],
+                "p_sted": action[self.actions.index("p_sted")]
+            }
+
+            # faut que j'update mon state avec ma plus récente acq :)
+            self.state.enqueue(sted_image)
+            observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"]])
+
+            # ~!* RETURN DLA SCRAP ICITTE *!~
+            return [observation, objective_vals], reward, done, info
 
     def reset(self):
         synapse = self.synapse_generator.generate()
@@ -130,11 +250,12 @@ class timedExpSTEDEnv(gym.Env):
             decay_time_us=self.exp_time_us,
             n_decay_steps=20
         )
-
+        n_molecs_init = self.temporal_datamap.base_datamap.sum()
         conf_params = self.microscope_generator.generate_params()
         first_acq, _, _ = self.microscope.get_signal_and_bleach(
             self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
         )
+        n_molecs_post = self.temporal_datamap.base_datamap.sum()
         # for the state, fill a queue with the first observation,
         # If I only add it once to the Q the head will point to an array of zeros until the Q is filled,
         # which is not what I want
@@ -150,5 +271,53 @@ class timedExpSTEDEnv(gym.Env):
                                                                   self.exp_time_us, bleach=True,
                                                                   bleach_mode="proportional")
 
-        # I think this is how I need to return it to ensure the right shape so it can go through the nn
-        return numpy.transpose(self.state.to_array(), (1, 2, 0))
+        # foreground on confocal image
+        fg_c = get_foreground(first_acq)
+        # foreground on sted image
+        if numpy.any(first_acq):
+            fg_s = get_foreground(first_acq)
+        else:
+            fg_s = numpy.ones_like(fg_c)
+        # remove STED foreground points not in confocal foreground, if any
+        fg_s *= fg_c
+
+        rewards = self._reward_calculator.evaluate(first_acq, first_acq, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                   self.temporal_datamap)
+
+        # faut aussi que je retourne le vecteur avec [SNR, Resolution, Bleach] ... how?
+        # caluler les rewards avec MORewardsCalculator et utiliser ça I guess? ou juste retourne [0, 0, 0] ?
+        objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"]])
+        return [numpy.transpose(self.state.to_array(), (1, 2, 0)), objective_vals]
+
+    def render(self, info, mode='human'):
+        """
+        unsure when this will be used
+        Renders the environment
+
+        :param info: A `dict` of data
+        :param mode: A `str` of the available mode
+        """
+        fig, axes = pyplot.subplots(1, 3, figsize=(10, 3), sharey=True, sharex=True)
+
+        axes[0].imshow(info["conf1"])
+        axes[0].set_title(f"Datamap roi")
+
+        axes[1].imshow(info["bleached"]["base"][self.temporal_datamap.roi])
+        axes[1].set_title(f"Bleached datamap")
+
+        axes[2].imshow(info["sted_image"])
+        axes[2].set_title(f"Acquired signal (photons)")
+
+        pyplot.show(block=True)
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+    def update_(self, **kwargs):
+        # unsure when this will be used
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def close(self):
+        return None
