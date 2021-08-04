@@ -46,7 +46,7 @@ action_spaces = {
 }
 
 
-class timedExpSTEDEnv(gym.Env):
+class timedExpSTEDEnv2(gym.Env):
     """
     Creates a 'STEDEnv'
 
@@ -340,7 +340,7 @@ if __name__ == "__main__":
     # print(f"info = {info}")
     # print(f"reward = {reward}")
 
-    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"])
+    env = timedExpSTEDEnv2(actions=["pdt", "p_ex", "p_sted"])
     state = env.reset()
     env.clock.current_time = 0
     obs, reward, done, info = env.step([10, 10, 0.5])
