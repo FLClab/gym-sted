@@ -177,7 +177,7 @@ class timedExpSTEDEnv(gym.Env):
             objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"]])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
-            return [observation, objective_vals], reward[0], done, info
+            return [observation, objective_vals], reward, done, info
 
         else:
             # case where the agent can image at least one pixel given the time left in the exp and selected pdt
@@ -208,12 +208,18 @@ class timedExpSTEDEnv(gym.Env):
             # remove STED foreground points not in confocal foreground, if any
             fg_s *= fg_c
 
-            # this is the scalarized reward
-            reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
-                                                     self.temporal_datamap)
             # this is the vector of individual rewards for individual objectives
             rewards = self._reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
                                                        self.temporal_datamap)
+
+            # compute rewards differently for monitoring or detection mode
+            if sted_params["p_sted"] < p_sted_threshold:   # monitoring
+                reward = 0
+                rewards["NbNanodomains"] = 0
+            else:   # detection
+                # this is the scalarized reward
+                reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                         self.temporal_datamap)
 
             done = self.temporal_experiment.clock.current_time >= self.exp_time_us
 
@@ -321,3 +327,24 @@ class timedExpSTEDEnv(gym.Env):
 
     def close(self):
         return None
+
+
+if __name__ == "__main__":
+    from matplotlib import pyplot as plt
+
+    # ces params me donned une Resolution de -0.5 ???
+    # env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"])
+    # state = env.reset()
+    # env.clock.current_time = 2000000 - 150
+    # obs, reward, done, info = env.step([10, 10, 0.00005])
+    # print(f"info = {info}")
+    # print(f"reward = {reward}")
+
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"])
+    state = env.reset()
+    env.clock.current_time = 0
+    obs, reward, done, info = env.step([10, 10, 0.5])
+    print(f"info = {info}")
+    print(f"reward = {reward}")
+    plt.imshow(info["sted_image"])
+    plt.show()
