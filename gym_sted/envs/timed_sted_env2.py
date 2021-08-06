@@ -82,7 +82,7 @@ class timedExpSTEDEnv2(gym.Env):
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
                        dtype=numpy.uint16),
-            spaces.Box(0, scales_dict["Resolution"]["max"], shape=(3,), dtype=numpy.float32)
+            spaces.Box(0, scales_dict["Resolution"]["max"], shape=(4,), dtype=numpy.float32)
         ))
 
 
