@@ -174,7 +174,8 @@ class timedExpSTEDEnv2(gym.Env):
             # faut que j'update mon state avec ma plus récente acq :)
             self.state.enqueue(sted_image)
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
-            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"]])
+            normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
             return [observation, objective_vals], reward, done, info
@@ -239,7 +240,8 @@ class timedExpSTEDEnv2(gym.Env):
             # faut que j'update mon state avec ma plus récente acq :)
             self.state.enqueue(sted_image)
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
-            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"]])
+            normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
             return [observation, objective_vals], reward, done, info
@@ -292,7 +294,8 @@ class timedExpSTEDEnv2(gym.Env):
 
         # faut aussi que je retourne le vecteur avec [SNR, Resolution, Bleach] ... how?
         # caluler les rewards avec MORewardsCalculator et utiliser ça I guess? ou juste retourne [0, 0, 0] ?
-        objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"]])
+        normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
+        objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
         return [numpy.transpose(self.state.to_array(), (1, 2, 0)), objective_vals]
 
     def render(self, info, mode='human'):
