@@ -70,7 +70,17 @@ register(
 register(
     id="STEDtimed-v2",
     entry_point="gym_sted.envs:timedExpSTEDEnv2",
-    max_episode_steps=13,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    kwargs={
+        "reward_calculator" : "NanodomainsRewardCalculator",
+        "actions" : ["pdt", "p_ex", "p_sted"]
+    }
+)
+
+register(
+    id="STEDtimedOld-v2",
+    entry_point="gym_sted.envs:timedExpSTEDEnv2old",
+    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
     kwargs={
         "reward_calculator" : "NanodomainsRewardCalculator",
         "actions" : ["pdt", "p_ex", "p_sted"]
