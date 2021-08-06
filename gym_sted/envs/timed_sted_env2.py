@@ -222,7 +222,8 @@ class timedExpSTEDEnv2(gym.Env):
                 reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
                                                          self.temporal_datamap)
 
-            done = self.temporal_experiment.clock.current_time >= self.exp_time_us
+            n_molecules_total = numpy.sum(self.temporal_datamap.whole_datamap)
+            done = self.temporal_experiment.clock.current_time >= self.exp_time_us or n_molecules_total == 0
 
             info = {
                 "action": action,
