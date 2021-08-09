@@ -2,14 +2,14 @@
 #
 # Useful documentation: https://docs.google.com/document/d/1-a0vWkz7x5JNSlDRdf5EW2wRLviC4F__g4S4YGexHZA/edit#
 #
-#SBATCH --time=24:00:00
-#SBATCH --account=def-flavielc
-#SBATCH --cpus-per-task=26
+#SBATCH --time=00:20:00
+#SBATCH --account=def-adurand
+#SBATCH --cpus-per-task=2
 #SBATCH --mem=30G
 #SBATCH --array=0-4
 #SBATCH --gres=gpu:v100:1
 #SBATCH --output=logs/%x-%j.out
-#SBATCH --mail-user=anbil106@ulaval.ca
+#SBATCH --mail-user=betur57@ulaval.ca
 #SBATCH --mail-type=ALL
 #
 
