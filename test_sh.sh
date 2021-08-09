@@ -16,7 +16,7 @@
 #### PARAMETERS
 
 # Use this directory venv, reusable across RUNs
-VENV_DIR=${HOME}/projects/def-adurand/hazeless/neurips/gym_sted_env
+VENV_DIR=${HOME}/gym_sted_env
 
 module load python/3.8
 
