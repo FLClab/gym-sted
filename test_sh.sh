@@ -27,10 +27,10 @@ source $VENV_DIR/bin/activate
 #### RUNNING STUFF
 
 # Moves to working folder
-cd ~/projects/def-adurand/hazeless/neurips/gym_sted/gym-sted-pfrl
+cd ~/projects/def-adurand/hazeless/neurips/gym_sted
 
 echo "**** STARTED TRAINING ****"
 
-python main.py --env gym_sted:STEDtimed-v2 --outdir ./data/test2 --steps 10 --eval-interval 10 --eval-n-runs 2
+python gym-sted-pfrl/main.py --env gym_sted:STEDtimed-v2 --outdir ./data/test2 --steps 10 --eval-interval 10 --eval-n-runs 2
 
 echo "**** ENDED TRAINING ****"
