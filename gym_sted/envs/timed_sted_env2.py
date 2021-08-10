@@ -627,7 +627,7 @@ class timedExpSTEDEnv2SingleRwrd(gym.Env):
         return None
 
 
-class timedExpSTEDEnv2Smooth(gym.Env):
+class timedExpSTEDEnv2Bump(gym.Env):
     """
     Creates a 'STEDEnv'
 
@@ -645,7 +645,7 @@ class timedExpSTEDEnv2Smooth(gym.Env):
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
                  reward_calculator="NanodomainsRewardCalculator"):
         # self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
-        self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=5, seed=42)
+        self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=0, seed=None)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
@@ -836,14 +836,15 @@ class timedExpSTEDEnv2Smooth(gym.Env):
     def reset(self):
         synapse = self.synapse_generator.generate()
 
-        self.temporal_datamap = self.microscope_generator.generate_temporal_datamap(
+        self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_smoother_flash(
             temporal_datamap = {
                 "whole_datamap" : synapse.frame,
                 "datamap_pixelsize" : self.microscope_generator.pixelsize,
                 "synapse_obj": synapse
             },
             decay_time_us=self.exp_time_us,
-            n_decay_steps=20
+            n_decay_steps=20,
+            flash_delay=(2, 8)
         )
         n_molecs_init = self.temporal_datamap.base_datamap.sum()
         conf_params = self.microscope_generator.generate_params()
@@ -929,11 +930,23 @@ if __name__ == "__main__":
     # print(f"info = {info}")
     # print(f"reward = {reward}")
 
-    env = timedExpSTEDEnv2(actions=["pdt", "p_ex", "p_sted"])
+    # env = timedExpSTEDEnv2(actions=["pdt", "p_ex", "p_sted"])
+    # state = env.reset()
+    # env.clock.current_time = 0
+    # obs, reward, done, info = env.step([10, 10, 0.5])
+    # print(f"info = {info}")
+    # print(f"reward = {reward}")
+    # plt.imshow(info["sted_image"])
+    # plt.show()
+
+    env = timedExpSTEDEnv2Bump(actions=["pdt", "p_ex", "p_sted"])
+    # env = timedExpSTEDEnv2(actions=["pdt", "p_ex", "p_sted"])
     state = env.reset()
-    env.clock.current_time = 0
-    obs, reward, done, info = env.step([10, 10, 0.5])
-    print(f"info = {info}")
-    print(f"reward = {reward}")
-    plt.imshow(info["sted_image"])
+    plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
     plt.show()
+    # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
+    #     indices = {"flashes": t}
+    #     env.temporal_datamap.update_dicts(indices)
+    #     env.temporal_datamap.update_whole_datamap(t)
+    #     pyplot.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+    #     pyplot.show()
