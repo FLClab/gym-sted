@@ -4,9 +4,9 @@
 #
 #SBATCH --time=48:00:00
 #SBATCH --account=def-adurand
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=11
 #SBATCH --mem=30G
-#SBATCH --array=0-1
+#SBATCH --array=0
 #SBATCH --gres=gpu:v100:1
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-user=betur57@ulaval.ca
@@ -31,6 +31,6 @@ cd ~/projects/def-adurand/hazeless/neurips/gym_sted
 
 echo "**** STARTED TRAINING ****"
 
-python gym-sted-pfrl/main.py --env gym_sted:STEDtimed-v3 --outdir ./data/bump_env_training_1
+python gym-sted-pfrl/main.py --env gym_sted:STEDtimed-v3 --outdir ./data/bump_env_training_2 --num-envs 10
 
 echo "**** ENDED TRAINING ****"
