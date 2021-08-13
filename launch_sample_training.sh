@@ -31,6 +31,6 @@ cd ~/projects/def-adurand/hazeless/neurips/gym_sted
 
 echo "**** STARTED TRAINING ****"
 
-python gym-sted-pfrl/main.py --env gym_sted:STEDtimed-v4 --outdir ./data/sample_env_training_v3 --num-envs 20
+python gym-sted-pfrl/main.py --env gym_sted:STEDtimed-v4 --outdir ./data/sample_env_training_v3 --num-envs 20 --checkpoint_freq 1000
 
 echo "**** ENDED TRAINING ****"
