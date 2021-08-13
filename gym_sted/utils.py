@@ -60,7 +60,7 @@ class SynapseGenerator2():
     Creates a synapse generator
     """
     def __init__(self, molecules=5, n_nanodomains=40, n_molecs_in_domain=25,
-                    min_dist=100, valid_thickness=3, mode="rand", seed=None):
+                    min_dist=(50, 100), valid_thickness=(3, 10), mode="rand", seed=None):
         # Assigns member variables
         self.molecules = molecules
         self.n_nanodomains = n_nanodomains
@@ -69,6 +69,7 @@ class SynapseGenerator2():
         self.valid_thickness = valid_thickness
         self.mode = mode
         self.seed = seed
+        print(f"n_nanodomains = {n_nanodomains}")
 
     def __call__(self):
         """

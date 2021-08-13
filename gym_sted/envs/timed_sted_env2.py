@@ -645,7 +645,7 @@ class timedExpSTEDEnv2Bump(gym.Env):
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
                  reward_calculator="NanodomainsRewardCalculator"):
         # self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
-        self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=0, seed=None)
+        self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0, seed=None)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
@@ -942,11 +942,11 @@ if __name__ == "__main__":
     env = timedExpSTEDEnv2Bump(actions=["pdt", "p_ex", "p_sted"])
     # env = timedExpSTEDEnv2(actions=["pdt", "p_ex", "p_sted"])
     state = env.reset()
-    plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
-    plt.show()
-    # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
-    #     indices = {"flashes": t}
-    #     env.temporal_datamap.update_dicts(indices)
-    #     env.temporal_datamap.update_whole_datamap(t)
-    #     pyplot.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
-    #     pyplot.show()
+    # plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+    # plt.show()
+    for t in range(env.temporal_datamap.flash_tstack.shape[0]):
+        indices = {"flashes": t}
+        env.temporal_datamap.update_dicts(indices)
+        env.temporal_datamap.update_whole_datamap(t)
+        pyplot.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+        pyplot.show()
