@@ -69,7 +69,6 @@ class SynapseGenerator2():
         self.valid_thickness = valid_thickness
         self.mode = mode
         self.seed = seed
-        print(f"n_nanodomains = {n_nanodomains}")
 
     def __call__(self):
         """
@@ -248,6 +247,28 @@ class MicroscopeGenerator():
         temporal_datamap = base.TemporalSynapseDmap(**temporal_datamap_params)
         temporal_datamap.set_roi(i_ex, "max")
         temporal_datamap.create_t_stack_dmap_smooth(decay_time_us, n_decay_steps=n_decay_steps, delay=flash_delay)
+        temporal_datamap.update_whole_datamap(0)
+
+        return temporal_datamap
+
+    def generate_temporal_datamap_sampled_flash(self, **kwargs):
+        temporal_datamap_params = kwargs.get("temporal_datamap", {
+            "whole_datamap": kwargs.get("whole_datamap", self.molecules_disposition),
+            "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize),
+            "synapse_obj": kwargs.get("synapse_obj", None),
+        })
+
+        decay_time_us = kwargs.get("decay_time_us", 1000000)
+        n_decay_steps = kwargs.get("n_decay_steps", 10)
+        flash_delay = kwargs.get("flash_delay", 2)
+        # print(decay_time_us)
+        # for now I will create a TestTemporalDmap obj, but eventually this should be a TemporalSynapseDmap obj
+        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
+        # temporal_datamap = base.TestTemporalDmap(**temporal_datamap_params)
+        temporal_datamap = base.TemporalSynapseDmap(**temporal_datamap_params)
+        temporal_datamap.set_roi(i_ex, "max")
+        temporal_datamap.create_t_stack_dmap_sampled(decay_time_us, n_decay_steps=n_decay_steps, delay=flash_delay,
+                                                     curves_path="audurand_pysted/flash_files/events_curves.npy")
         temporal_datamap.update_whole_datamap(0)
 
         return temporal_datamap
