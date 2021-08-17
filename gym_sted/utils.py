@@ -21,7 +21,7 @@ class SynapseGenerator():
     """
     Creates a synapse generator
     """
-    def __init__(self, molecules=2, n_nanodomains=40, n_molecs_in_domain=25,
+    def __init__(self, molecules=5, n_nanodomains=40, n_molecs_in_domain=25,
                     min_dist=100, valid_thickness=3, mode="rand", seed=None):
         # Assigns member variables
         self.molecules = molecules
@@ -54,6 +54,45 @@ class SynapseGenerator():
                 n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
             )
         return synapse.frame
+
+class SynapseGenerator2():
+    """
+    Creates a synapse generator
+    """
+    def __init__(self, molecules=5, n_nanodomains=40, n_molecs_in_domain=25,
+                    min_dist=(50, 100), valid_thickness=(3, 10), mode="rand", seed=None):
+        # Assigns member variables
+        self.molecules = molecules
+        self.n_nanodomains = n_nanodomains
+        self.n_molecs_in_domain = n_molecs_in_domain
+        self.min_dist = min_dist
+        self.valid_thickness = valid_thickness
+        self.mode = mode
+        self.seed = seed
+
+    def __call__(self):
+        """
+        Implements the `call` method of the class.
+
+        :returns : A `numpy.ndarray` of the molecules
+        """
+        return self.generate()
+
+    def generate(self):
+        """
+        Generates the molecule disposition
+
+        :returns : A `numpy.ndarray` of the molecules
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            synapse = dg.Synapse(self.molecules, mode=self.mode, seed=self.seed)
+            synapse.add_nanodomains(
+                self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
+                n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
+            )
+        # return synapse.frame
+        return synapse
 
 class MoleculesGenerator():
     """
@@ -173,16 +212,64 @@ class MicroscopeGenerator():
         # jveux tu mettre les params pour créer le tstack ici ou jveux gérer ça direct dans l'env?
         temporal_datamap_params = kwargs.get("temporal_datamap", {
             "whole_datamap": kwargs.get("whole_datamap", self.molecules_disposition),
-            "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize)
+            "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize),
+            "synapse_obj": kwargs.get("synapse_obj", None)
         })
 
         decay_time_us = kwargs.get("decay_time_us", 1000000)
+        n_decay_steps = kwargs.get("n_decay_steps", 10)
         # print(decay_time_us)
         # for now I will create a TestTemporalDmap obj, but eventually this should be a TemporalSynapseDmap obj
         i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
-        temporal_datamap = base.TestTemporalDmap(**temporal_datamap_params)
+        # temporal_datamap = base.TestTemporalDmap(**temporal_datamap_params)
+        temporal_datamap = base.TemporalSynapseDmap(**temporal_datamap_params)
         temporal_datamap.set_roi(i_ex, "max")
-        temporal_datamap.create_t_stack_dmap(decay_time_us)
+        temporal_datamap.create_t_stack_dmap(decay_time_us, n_decay_steps=n_decay_steps)
+        temporal_datamap.update_whole_datamap(0)
+
+        return temporal_datamap
+
+    def generate_temporal_datamap_smoother_flash(self, **kwargs):
+        # jveux tu mettre les params pour créer le tstack ici ou jveux gérer ça direct dans l'env?
+        temporal_datamap_params = kwargs.get("temporal_datamap", {
+            "whole_datamap": kwargs.get("whole_datamap", self.molecules_disposition),
+            "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize),
+            "synapse_obj": kwargs.get("synapse_obj", None),
+        })
+
+        decay_time_us = kwargs.get("decay_time_us", 1000000)
+        n_decay_steps = kwargs.get("n_decay_steps", 10)
+        flash_delay = kwargs.get("flash_delay", 2)
+        # print(decay_time_us)
+        # for now I will create a TestTemporalDmap obj, but eventually this should be a TemporalSynapseDmap obj
+        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
+        # temporal_datamap = base.TestTemporalDmap(**temporal_datamap_params)
+        temporal_datamap = base.TemporalSynapseDmap(**temporal_datamap_params)
+        temporal_datamap.set_roi(i_ex, "max")
+        temporal_datamap.create_t_stack_dmap_smooth(decay_time_us, n_decay_steps=n_decay_steps, delay=flash_delay)
+        temporal_datamap.update_whole_datamap(0)
+
+        return temporal_datamap
+
+    def generate_temporal_datamap_sampled_flash(self, **kwargs):
+        temporal_datamap_params = kwargs.get("temporal_datamap", {
+            "whole_datamap": kwargs.get("whole_datamap", self.molecules_disposition),
+            "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize),
+            "synapse_obj": kwargs.get("synapse_obj", None),
+        })
+
+        decay_time_us = kwargs.get("decay_time_us", 1000000)
+        n_decay_steps = kwargs.get("n_decay_steps", 10)
+        flash_delay = kwargs.get("flash_delay", 2)
+        # print(decay_time_us)
+        # for now I will create a TestTemporalDmap obj, but eventually this should be a TemporalSynapseDmap obj
+        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
+        # temporal_datamap = base.TestTemporalDmap(**temporal_datamap_params)
+        temporal_datamap = base.TemporalSynapseDmap(**temporal_datamap_params)
+        temporal_datamap.set_roi(i_ex, "max")
+        temporal_datamap.create_t_stack_dmap_sampled(decay_time_us, n_decay_steps=n_decay_steps, delay=flash_delay,
+                                                     curves_path="audurand_pysted/flash_files/events_curves.npy")
+        temporal_datamap.update_whole_datamap(0)
 
         return temporal_datamap
 
@@ -194,3 +281,39 @@ class MicroscopeGenerator():
             "p_sted" : 0.
         })
         return imaging_params
+
+class RecordingQueue:
+    def __init__(self, object: object, maxlen: int, num_sensors: tuple):
+        self.rec_queue: numpy.array = numpy.zeros(shape=(maxlen, *num_sensors), dtype=numpy.int32) #allocate the memory we need ahead of time
+        self.max_length: int = maxlen
+        self.queue_tail: int = maxlen - 1
+        if (len(object) > 0):
+            for val in object:
+                self.enqueue(val)
+
+    def to_array(self) -> numpy.array:
+        head = (self.queue_tail + 1) % self.max_length
+        return numpy.roll(self.rec_queue, -head, axis=0) # this will force a copy
+
+    def enqueue(self, new_data: numpy.array) -> None:
+        # move tail pointer forward then insert at the tail of the queue
+        # to enforce max length of recording
+        self.queue_tail = (self.queue_tail + 1) % self.max_length
+        self.rec_queue[self.queue_tail] = new_data
+
+    def peek(self) -> int:
+        queue_head = (self.queue_tail + 1) % self.max_length
+        return self.rec_queue[queue_head]
+    def item_at(self, index: int) -> int:
+        # the item we want will be at head + index
+        loc = (self.queue_tail + 1 + index) % self.max_length
+        return self.rec_queue[loc]
+    def replace_item_at(self, index: int, newItem: int):
+        # the item we want will be at head + index
+        loc = (self.queue_tail + 1 + index) % self.max_length
+        self.rec_queue[loc] = newItem
+    def __repr__(self):
+        return "tail: " + str(self.queue_tail) + "\narray: " + str(self.rec_queue)
+    def __str__(self):
+        return "tail: " + str(self.queue_tail) + "\narray:\n" + str(self.rec_queue)
+        return str(self.to_array())
