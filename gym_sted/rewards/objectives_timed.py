@@ -1,6 +1,10 @@
 
 """This module contains classes that implement several objectives to optimize.
 One can define a new objective by inheriting abstract class :class:`Objective`.
+***
+This implementation is for the objectives of the 2nd gym setting, in which datamaps evolve over time. Some details, such
+as bleaching computation, differ due to this, which is why the implementation here differs from the one in objectives.py
+***
 """
 
 from abc import ABC, abstractmethod
@@ -15,22 +19,26 @@ from skimage.transform import resize
 from skimage.feature import peak_local_max
 from sklearn.metrics import mean_squared_error
 
+
 class Objective(ABC):
     """Abstract class to implement an objective to optimize. When inheriting this class,
     one needs to define an attribute `label` to be used for figure labels, and a
     function :func:`evaluate` to be called during optimization.
     """
     @abstractmethod
-    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
         """Compute the value of the objective given the result of an acquisition.
 
         :param sted_stack: A list of STED images.
         :param confocal_init: A confocal image acquired before the STED stack.
-        :param concofal_end: A confocal image acquired after the STED stack.
         :param sted_fg: A background mask of the first STED image in the stack
                         (2d array of bool: True on foreground, False on background).
         :param confocal_fg: A background mask of the initial confocal image
                             (2d array of bool: True on foreground, False on background).
+        :param n_molecs_init: The number of molecules in the BASE DATAMAP before the acquisition
+        :param n_molecs_post: The number of molecules in the BASE DATAMAP after the acquisition
+        :param temporal_datamap: The temporal_datamap object being acquired on, containing a synapse object with info on
+                                 the number and positions of the nanodomains
         """
         raise NotImplementedError
 
@@ -63,7 +71,7 @@ class Signal_Ratio(Objective):
         self.select_optimal = numpy.argmax
         self.percentile = percentile
 
-    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
         """Compute the signal to noise ratio (SNR) given the result of an acquisition.
 
         :param sted_stack: A list of STED images.
@@ -79,8 +87,10 @@ class Signal_Ratio(Objective):
 
         """
         if numpy.any(sted_fg):
-            foreground = numpy.percentile(sted_stack[0][sted_fg], self.percentile)
-            background = numpy.mean(sted_stack[0][numpy.invert(sted_fg)])
+            # foreground = numpy.percentile(sted_stack[0][sted_fg], self.percentile)
+            # background = numpy.mean(sted_stack[0][numpy.invert(sted_fg)])
+            foreground = numpy.percentile(sted_stack[sted_fg], self.percentile)
+            background = numpy.mean(sted_stack[numpy.invert(sted_fg)])
             ratio = (foreground - background) / numpy.percentile(confocal_init[confocal_fg], self.percentile)
             if ratio < 0:
                 return None
@@ -89,16 +99,17 @@ class Signal_Ratio(Objective):
         else:
             return 0
 
+
 class Bleach(Objective):
     def __init__(self):
         self.label = "Bleach"
         self.select_optimal = numpy.argmin
 
-    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg):
-        signal_i = numpy.mean(confocal_init[confocal_fg])
-        signal_e = numpy.mean(confocal_end[confocal_fg])
-        bleach = (signal_i - signal_e) / signal_i
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
+        # in this case however I will want to reward for less bleaching, so 1 - bleach ?
+        bleach = (n_molecs_init - n_molecs_post) / n_molecs_init
         return bleach
+
 
 class Resolution(Objective):
     def __init__(self, pixelsize, res_cap=250):
@@ -106,12 +117,13 @@ class Resolution(Objective):
         self.select_optimal = numpy.argmin
         self.pixelsize = pixelsize
 #            self.kwargs = kwargs
-        self.res_cap=250
+        self.res_cap = 250
 
-    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            res = self.decorrelation(image=sted_stack[0])*self.pixelsize/1e-9
+            # res = self.decorrelation(image=sted_stack[0]) * self.pixelsize / 1e-9
+            res = self.decorrelation(image=sted_stack) * self.pixelsize / 1e-9
         if res > self.res_cap:
             res = self.res_cap
         return res
@@ -281,91 +293,26 @@ class Resolution(Objective):
 
         return res
 
-class Squirrel(Objective):
-    """
-    Implements the `Squirrel` objective
 
-    :param method: A `str` of the method used to optimize
-    :param normalize: A `bool` wheter to normalize the images
-    """
-    def __init__(self, method="L-BFGS-B", normalize=False):
-
-        self.method = method
-        self.bounds = (-numpy.inf, numpy.inf), (-numpy.inf, numpy.inf), (0, numpy.inf)
-        self.x0 = (1, 0, 1)
-        self.normalize = normalize
-        self.select_optimal = numpy.argmin
-
-    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg):
-        """
-        Evaluates the objective
-
-        :param sted_stack: A list of STED images.
-        :param confocal_init: A confocal image acquired before the STED stack.
-        :param concofal_end: A confocal image acquired after the STED stack.
-        :param sted_fg: A background mask of the first STED image in the stack
-                        (2d array of bool: True on foreground, False on background).
-        :param confocal_fg: A background mask of the initial confocal image
-                            (2d array of bool: True on foreground, False on background).
-        """
-        # Optimize
-        result = self.optimize(sted_stack[0], confocal_init)
-        return self.squirrel(result.x, sted_stack[0], confocal_init)
-
-    def squirrel(self, x, *args):
-        """
-        Computes the reconstruction error between
-        """
-        alpha, beta, sigma = x
-        super_resolution, reference = args
-        convolved = self.convolve(super_resolution, alpha, beta, sigma)
-        if self.normalize:
-            reference = (reference - reference.min()) / (reference.max() - reference.min() + 1e-9)
-            convolved = (convolved - convolved.min()) / (convolved.max() - convolved.min() + 1e-9)
-        error = mean_squared_error(reference, convolved, squared=False)
-        return error
-
-    def optimize(self, super_resolution, reference):
-        """
-        Optimizes the SQUIRREL parameters
-
-        :param super_resolution: A `numpy.ndarray` of the super-resolution image
-        :param reference: A `numpy.ndarray` of the reference image
-
-        :returns : An `OptimizedResult`
-        """
-        result = optimize.minimize(
-            self.squirrel, self.x0, args=(super_resolution, reference),
-            method="L-BFGS-B", bounds=((-numpy.inf, numpy.inf), (-numpy.inf, numpy.inf), (0, numpy.inf))
-        )
-        return result
-
-    def convolve(self, img, alpha, beta, sigma):
-        """
-        Convolves an image with the given parameters
-        """
-        return gaussian_filter(img * alpha + beta, sigma=sigma)
-
-class NumberNanodomains():
+class NumberNanodomains(Objective):
     def __init__(self):
         # Do I need to inherit from the Objective class? this reward objective seems different from the others
-        self.label = "Nb Nanodomains"
-        self.select_optimal = None   # not sure what to put here
+        self.label = "NbNanodomains"
+        self.select_optimal = None   # not sure what to put here ?????
 
-    def evaluate(self, latest_acq, datamap):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
         """
-        Really unsure how I'm supposed to do this,
-        for now I  will pass the latest acquisition as input as well as the datamap
-        the datamap should have the real number of nanodomains as an attribute (VERIFY THIS)
-        I will do thresholding on the latest acq as the agent's guess to the number of nd
-        ???
+        Identify local maxima to 'guess' a number of nanodomains
         """
         # for this exp the datamap has to be a TemporalSynapseDmap object, so I can get the number of nanodomains
-        n_nanodomains_gt = len(datamap.synapse.nanodomains)
+        n_nanodomains_gt = len(temporal_datamap.synapse.nanodomains)
 
         # for the agent's guess, I will do a thresholding thing for now, but I'm unsure if this is truly how I will want
         # to proceed.
-        peak_id_coord = peak_local_max(latest_acq, min_distance=2, threshold_rel=0.5)
+        # *** THIS ASSUMES THE 0TH ELT OF STED_STACK IS THE MOST RECENT, NEED TO VALIDATE THIS ***
+        # peak_id_coord = peak_local_max(sted_stack[0], min_distance=2, threshold_rel=0.5)
+        # I only pass 1 sted image so its not really a stack :)
+        peak_id_coord = peak_local_max(sted_stack, min_distance=2, threshold_rel=0.5)
 
         n_nanodomains_agent_guess = len(peak_id_coord)
 

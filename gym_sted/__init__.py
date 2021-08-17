@@ -76,6 +76,65 @@ register(
     }
 )
 
+# Timed env for exp 2
+register(
+    id="STEDtimed-v0",
+    entry_point="gym_sted.envs:timedExpSTEDEnv",
+    max_episode_steps=13,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    kwargs={
+        "reward_calculator" : "MultiplyRewardCalculator",
+        "actions" : ["pdt", "p_ex", "p_sted"]
+    }
+)
+
+register(
+    id="STEDtimed-v2",
+    entry_point="gym_sted.envs:timedExpSTEDEnv2",
+    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    kwargs={
+        "reward_calculator" : "NanodomainsRewardCalculator",
+        "actions" : ["pdt", "p_ex", "p_sted"]
+    }
+)
+
+"""
+Follows the same implementation as v2, except the synapses are generated with random seed,
+the flash is now at idx 2 - 7, randomly sampled, and there is a slight increase in signal in the nanodomains 1 step
+before they flash
+"""
+register(
+    id="STEDtimed-v3",
+    entry_point="gym_sted.envs:timedExpSTEDEnv2Bump",
+    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    kwargs={
+        "reward_calculator" : "NanodomainsRewardCalculator",
+        "actions" : ["pdt", "p_ex", "p_sted"]
+    }
+)
+
+"""
+Follows the same implementation as v3, but the flashes are sampled from Theresa's data instead of hand crafted
+"""
+register(
+    id="STEDtimed-v4",
+    entry_point="gym_sted.envs:timedExpSTEDEnv2SampledFlash",
+    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    kwargs={
+        "reward_calculator" : "NanodomainsRewardCalculator",
+        "actions" : ["pdt", "p_ex", "p_sted"]
+    }
+)
+
+register(
+    id="STEDtimedOld-v2",
+    entry_point="gym_sted.envs:timedExpSTEDEnv2old",
+    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    kwargs={
+        "reward_calculator" : "NanodomainsRewardCalculator",
+        "actions" : ["pdt", "p_ex", "p_sted"]
+    }
+)
+
 # Debug environment
 register(
     id="STEDdebugResolutionSNR-v0",
