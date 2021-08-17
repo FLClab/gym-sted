@@ -39,7 +39,7 @@ class DebugBleachSTEDEnv(gym.Env):
 
     obj_names = ["Bleach"]
 
-    def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"]):
+    def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted", "p_ex", "pdt"]):
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
         self.microscope_generator = MicroscopeGenerator()
@@ -65,12 +65,16 @@ class DebugBleachSTEDEnv(gym.Env):
         self.datamap = None
         self.viewer = None
 
+        # self.clear_statistics()
+
         self.seed()
 
     def step(self, action):
 
         # We manually rescale and clip the actions which are out of action space
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # self.statistics["mean-action"].append(action)
 
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
@@ -153,6 +157,16 @@ class DebugBleachSTEDEnv(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+
+    # def get_statistics(self):
+    #     # return [("mean-action", [])]
+    #     return [tuple((key, numpy.mean(value, axis=0))) if value else tuple((key, None)) for key, value in self.statistics.items()]
+    #
+    # def clear_statistics(self):
+    #     self.statistics = {
+    #         "mean-action" : []
+    #     }
+    #     return
 
     def close(self):
         return None
