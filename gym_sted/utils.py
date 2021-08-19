@@ -179,7 +179,6 @@ class MicroscopeGenerator():
             tmp = self.fluo_params.copy()
             tmp["phy_react"] = kwargs.get("phy_react")
             fluo = base.Fluorescence(**tmp)
-            print(tmp["phy_react"])
         else:
             fluo = base.Fluorescence(**self.fluo_params)
 
