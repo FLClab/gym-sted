@@ -179,6 +179,7 @@ class MicroscopeGenerator():
             tmp = self.fluo_params.copy()
             tmp["phy_react"] = kwargs.get("phy_react")
             fluo = base.Fluorescence(**tmp)
+            print(tmp["phy_react"])
         else:
             fluo = base.Fluorescence(**self.fluo_params)
 
@@ -288,8 +289,13 @@ class BleachSampler:
             (100.0e-11, 15.0e-11) # p_sted
         ]
         self.normal_limits = [
-            (0.25e-7, 1.e-7), # p_ex
-            (25.0e-11, 100e-11) # p_sted
+            # those are the limits we want
+            # (0.25e-7, 1.e-7), # p_ex
+            # (25.0e-11, 100e-11) # p_sted
+
+            # this is the mean and standard deviation that should make us fall within the above limits :)
+            (0.5e-7, 0.25e-7),   # p_ex
+            (50.0e-11, 25.0e-11),   # p_sted
         ]
         self.choices = [
             (0.01e-7, 0.25e-7, 1.0e-7), # p_ex
@@ -324,9 +330,14 @@ class BleachSampler:
         """
         Implements a normal sampling of the bleach parameters
         """
+        # là live il utilise 25e-11 comme moyenne et 100e-11 comme std, mais on
+        # veut que ces chiffres là soient nos limites, donc je dois modif le code :)
         tmp = defaults.FLUO["phy_react"].copy()
         for key, (mu, std) in zip(tmp.keys(), self.normal_limits):
             tmp[key] = random.gauss(mu, std)
+            if tmp[key] < 0:
+                while tmp[key] < 0:
+                    tmp[key] = random.gauss(mu, std)
         return tmp
 
     def _choice_sample(self):
