@@ -78,7 +78,7 @@ register(
 
 register(
     id="MOSTEDranking-easy-v0",
-    entry_point="gym_sted.envs:rankSTEDMultiObjectiveEnv",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted"],
@@ -88,7 +88,7 @@ register(
 
 register(
     id="MOSTEDranking-easy-v1",
-    entry_point="gym_sted.envs:rankSTEDMultiObjectiveEnv",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
@@ -98,7 +98,7 @@ register(
 
 register(
     id="MOSTEDranking-hard-v0",
-    entry_point="gym_sted.envs:rankSTEDMultiObjectiveEnv",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted"],
@@ -108,7 +108,7 @@ register(
 
 register(
     id="MOSTEDranking-hard-v1",
-    entry_point="gym_sted.envs:rankSTEDMultiObjectiveEnv",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],

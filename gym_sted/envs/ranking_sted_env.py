@@ -279,7 +279,7 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
     def close(self):
         return None
 
-class rankSTEDMultiObjectiveEnv(gym.Env):
+class rankSTEDMultiObjectivesEnv(gym.Env):
     """
     Creates a `rankSTEDMultiObjectiveEnv`
 
@@ -459,7 +459,7 @@ class rankSTEDMultiObjectiveEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = state[..., numpy.newaxis]
-        return [self.state, numpy.zeros((self.spec.max_episode_steps,))]
+        return [self.state, numpy.zeros((self.observation_space[1].shape[0],))]
 
     def render(self, info, mode='human'):
         """

@@ -285,7 +285,7 @@ class BleachSampler:
         self.mode = mode
         self.uniform_limits = [
             (0.25e-8, 0.25e-6), # p_ex
-            (25.0e-12, 25.0e-10) # p_sted
+            (100.0e-11, 15.0e-11) # p_sted
         ]
         self.normal_limits = [
             (0.25e-7, 1.e-7), # p_ex
@@ -293,7 +293,7 @@ class BleachSampler:
         ]
         self.choices = [
             (0.01e-7, 0.25e-7, 1.0e-7), # p_ex
-            (2.5e-11, 25.0e-11, 50.0e-11) # p_sted
+            (15.0e-11, 25.0e-11, 100.0e-11) # p_sted
         ]
         self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
 
