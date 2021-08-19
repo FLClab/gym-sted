@@ -31,6 +31,6 @@ cd ~/projects/def-adurand/hazeless/neurips/gym_sted
 
 echo "**** STARTED TRAINING ****"
 
-python gym-sted-pfrl/transfer_learning_tests.py --env gym_sted:STEDtimed-v3 --outdir ./data/bump_env_training_v3_easy --num-envs 20 --checkpoint_freq 1000
+python gym-sted-pfrl/main.py --env gym_sted:STEDtimed-v3 --outdir ./data/bump_env_training_v4_easy --num-envs 20 --checkpoint_freq 1000 --bleach_sampling constant
 
 echo "**** ENDED TRAINING ****"
