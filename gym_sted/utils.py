@@ -1,11 +1,14 @@
 
 import numpy
+import random
 import warnings
 
 from skimage import filters
 
 from pysted import base, utils
 from pysted import exp_data_gen as dg
+
+from . import defaults
 
 def get_foreground(img):
     """Return a background mask of the given image using the OTSU method to threshold.
@@ -158,26 +161,11 @@ class MicroscopeGenerator():
                     i * self.molecules_disposition.shape[1]//4 - delta : i * self.molecules_disposition.shape[1]//4 + delta + 1] = num_mol
 
         # Extracts params
-        self.laser_ex_params = kwargs.get("laser_ex", {"lambda_" : 488e-9})
-        self.laser_sted_params = kwargs.get("laser_sted", {"lambda_" : 575e-9, "zero_residual" : 0})
-        self.detector_params = kwargs.get("detector", {"noise" : True})
-        self.objective_params = kwargs.get("objective", {})
-        self.fluo_params = kwargs.get("fluo",{
-            "lambda_": 535e-9,
-            "qy": 0.6,
-            "sigma_abs": {488: 1.15e-20,
-                          575: 6e-21},
-            "sigma_ste": {560: 1.2e-20,
-                          575: 6.0e-21,
-                          580: 5.0e-21},
-            "sigma_tri": 1e-21,
-            "tau": 3e-09,
-            "tau_vib": 1.0e-12,
-            "tau_tri": 5e-6,
-            "phy_react": {488: 0.25e-7,   # 1e-4
-                          575: 25.0e-11},   # 1e-8
-            "k_isc": 0.26e+6
-        })
+        self.laser_ex_params = kwargs.get("laser_ex", defaults.LASER_EX)
+        self.laser_sted_params = kwargs.get("laser_sted", defaults.LASER_STED)
+        self.detector_params = kwargs.get("detector", defaults.DETECTOR)
+        self.objective_params = kwargs.get("objective", defaults.OBJECTIVE)
+        self.fluo_params = kwargs.get("fluo", defaults.FLUO)
         self.pixelsize = 20e-9
 
     def generate_microscope(self, **kwargs):
@@ -187,8 +175,12 @@ class MicroscopeGenerator():
         laser_sted = base.DonutBeam(**self.laser_sted_params)
         detector = base.Detector(**self.detector_params)
         objective = base.Objective(**self.objective_params)
-        fluo = base.Fluorescence(**self.fluo_params)
-
+        if "phy_react" in kwargs:
+            tmp = self.fluo_params.copy()
+            tmp["phy_react"] = kwargs.get("phy_react")
+            fluo = base.Fluorescence(**tmp)
+        else:
+            fluo = base.Fluorescence(**self.fluo_params)
 
         self.microscope = base.Microscope(laser_ex, laser_sted, detector, objective, fluo)
         i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
@@ -281,6 +273,70 @@ class MicroscopeGenerator():
             "p_sted" : 0.
         })
         return imaging_params
+
+class BleachSampler:
+    """
+    Creates a `BleachSampler` to sample new bleaching function parameters
+
+    :param mode: The sampling mode from {constant, uniform, choice}
+    """
+    def __init__(self, mode):
+
+        self.mode = mode
+        self.uniform_limits = [
+            (0.25e-8, 0.25e-6), # p_ex
+            (25.0e-12, 25.0e-10) # p_sted
+        ]
+        self.normal_limits = [
+            (0.25e-7, 1.e-7), # p_ex
+            (25.0e-11, 100e-11) # p_sted
+        ]
+        self.choices = [
+            (0.01e-7, 0.25e-7, 1.0e-7), # p_ex
+            (2.5e-11, 25.0e-11, 50.0e-11) # p_sted
+        ]
+        self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
+
+    def sample(self):
+        """
+        Implements the sample method
+
+        :returns : A `dict` of `phy_react`
+        """
+        return self.sampling_method()
+
+    def _constant_sample(self):
+        """
+        Implements a constant sampling of the bleach parameters
+        """
+        return defaults.FLUO["phy_react"]
+
+    def _uniform_sample(self):
+        """
+        Implements a uniform sampling of the bleach parameters
+        """
+        tmp = defaults.FLUO["phy_react"].copy()
+        for key, (m, M) in zip(tmp.keys(), self.uniform_limits):
+            tmp[key] = random.uniform(m, M)
+        return tmp
+
+    def _normal_sample(self):
+        """
+        Implements a normal sampling of the bleach parameters
+        """
+        tmp = defaults.FLUO["phy_react"].copy()
+        for key, (mu, std) in zip(tmp.keys(), self.normal_limits):
+            tmp[key] = random.gauss(mu, std)
+        return tmp
+
+    def _choice_sample(self):
+        """
+        Implements a choice sampling of the bleach parameters
+        """
+        tmp = defaults.FLUO["phy_react"].copy()
+        for key, choices in zip(tmp.keys(), self.choices):
+            tmp[key] = random.choice(choices)
+        return tmp
 
 class RecordingQueue:
     def __init__(self, object: object, maxlen: int, num_sensors: tuple):

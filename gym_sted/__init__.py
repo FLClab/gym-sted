@@ -38,7 +38,7 @@ register(
 # Ranking environment
 register(
     id="STEDranking-easy-v0",
-    entry_point="gym_sted.envs:rankSTEDEnv",
+    entry_point="gym_sted.envs:rankSTEDSingleObjectiveEnv",
     max_episode_steps=10,
     kwargs={
         "reward_calculator" : "MultiplyRewardCalculator",
@@ -48,7 +48,7 @@ register(
 
 register(
     id="STEDranking-easy-v1",
-    entry_point="gym_sted.envs:rankSTEDEnv",
+    entry_point="gym_sted.envs:rankSTEDSingleObjectiveEnv",
     max_episode_steps=10,
     kwargs={
         "reward_calculator" : "MultiplyRewardCalculator",
@@ -58,7 +58,7 @@ register(
 
 register(
     id="STEDranking-hard-v0",
-    entry_point="gym_sted.envs:rankSTEDEnv",
+    entry_point="gym_sted.envs:rankSTEDSingleObjectiveEnv",
     max_episode_steps=10,
     kwargs={
         "reward_calculator" : "BoundedRewardCalculator",
@@ -68,11 +68,51 @@ register(
 
 register(
     id="STEDranking-hard-v1",
-    entry_point="gym_sted.envs:rankSTEDEnv",
+    entry_point="gym_sted.envs:rankSTEDSingleObjectiveEnv",
     max_episode_steps=10,
     kwargs={
         "reward_calculator" : "BoundedRewardCalculator",
         "actions" : ["p_sted", "p_ex", "pdt"]
+    }
+)
+
+register(
+    id="MOSTEDranking-easy-v0",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectiveEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted"],
+        "bleach_sampling" : "constant"
+    }
+)
+
+register(
+    id="MOSTEDranking-easy-v1",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectiveEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant"
+    }
+)
+
+register(
+    id="MOSTEDranking-hard-v0",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectiveEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted"],
+        "bleach_sampling" : "normal"
+    }
+)
+
+register(
+    id="MOSTEDranking-hard-v1",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectiveEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal"
     }
 )
 
