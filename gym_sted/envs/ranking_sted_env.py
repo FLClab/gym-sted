@@ -172,7 +172,7 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
             articulation = numpy.zeros((self.spec.max_episode_steps, ))
         else:
             articulation = numpy.eye(self.spec.max_episode_steps)[self.current_articulation]
-        return [self.state, articulation], reward, done, info
+        return (self.state, articulation), reward, done, info
 
     def reset(self):
         """
@@ -191,7 +191,7 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = state[..., numpy.newaxis]
-        return [self.state, numpy.zeros((self.spec.max_episode_steps,))]
+        return (self.state, numpy.zeros((self.spec.max_episode_steps,)))
 
     def render(self, info, mode='human'):
         """
@@ -434,7 +434,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             obs.extend(mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return [self.state, obs], reward, done, info
+        return (self.state, obs), reward, done, info
 
     def reset(self):
         """
@@ -459,7 +459,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = state[..., numpy.newaxis]
-        return [self.state, numpy.zeros((self.observation_space[1].shape[0],))]
+        return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
 
     def render(self, info, mode='human'):
         """
