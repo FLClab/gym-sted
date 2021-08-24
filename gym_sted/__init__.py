@@ -148,7 +148,8 @@ register(
     max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
     kwargs={
         "reward_calculator" : "NanodomainsRewardCalculator",
-        "actions" : ["pdt", "p_ex", "p_sted"]
+        "actions" : ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "constant"
     }
 )
 
@@ -161,27 +162,8 @@ register(
     max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
     kwargs={
         "reward_calculator" : "NanodomainsRewardCalculator",
-        "actions" : ["pdt", "p_ex", "p_sted"]
-    }
-)
-
-register(
-    id="STEDtimed-hard-v3",
-    entry_point="gym_sted.envs:timedExpSTEDEnv2BumpHard",
-    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
-    kwargs={
-        "reward_calculator" : "NanodomainsRewardCalculator",
-        "actions" : ["pdt", "p_ex", "p_sted"]
-    }
-)
-
-register(
-    id="STEDtimed-hard-v4",
-    entry_point="gym_sted.envs:timedExpSTEDEnv2SampledFlashHard",
-    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
-    kwargs={
-        "reward_calculator" : "NanodomainsRewardCalculator",
-        "actions" : ["pdt", "p_ex", "p_sted"]
+        "actions" : ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "constant"
     }
 )
 
