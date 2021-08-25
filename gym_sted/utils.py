@@ -25,7 +25,7 @@ class SynapseGenerator():
     Creates a synapse generator
     """
     def __init__(self, molecules=5, n_nanodomains=40, n_molecs_in_domain=25,
-                    min_dist=100, valid_thickness=3, mode="rand", seed=None):
+                    min_dist=100, valid_thickness=(3, 10), mode="rand", seed=None):
         # Assigns member variables
         self.molecules = molecules
         self.n_nanodomains = n_nanodomains
@@ -56,45 +56,6 @@ class SynapseGenerator():
                 self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
                 n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
             )
-        return synapse.frame
-
-class SynapseGenerator2():
-    """
-    Creates a synapse generator
-    """
-    def __init__(self, molecules=5, n_nanodomains=40, n_molecs_in_domain=25,
-                    min_dist=(50, 100), valid_thickness=(3, 10), mode="rand", seed=None):
-        # Assigns member variables
-        self.molecules = molecules
-        self.n_nanodomains = n_nanodomains
-        self.n_molecs_in_domain = n_molecs_in_domain
-        self.min_dist = min_dist
-        self.valid_thickness = valid_thickness
-        self.mode = mode
-        self.seed = seed
-
-    def __call__(self):
-        """
-        Implements the `call` method of the class.
-
-        :returns : A `numpy.ndarray` of the molecules
-        """
-        return self.generate()
-
-    def generate(self):
-        """
-        Generates the molecule disposition
-
-        :returns : A `numpy.ndarray` of the molecules
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            synapse = dg.Synapse(self.molecules, mode=self.mode, seed=self.seed)
-            synapse.add_nanodomains(
-                self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
-                n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
-            )
-        # return synapse.frame
         return synapse
 
 class MoleculesGenerator():
