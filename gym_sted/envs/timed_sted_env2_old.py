@@ -13,7 +13,7 @@ from collections import OrderedDict
 
 import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator2, MicroscopeGenerator, RecordingQueue, get_foreground
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, RecordingQueue, get_foreground
 from gym_sted.rewards import objectives_timed2, rewards_timed2
 from gym_sted.prefnet import PreferenceArticulator
 
@@ -58,8 +58,8 @@ class timedExpSTEDEnv2old(gym.Env):
 
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
                  reward_calculator="NanodomainsRewardCalculator"):
-        # self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
-        self.synapse_generator = SynapseGenerator2(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=5, seed=42)
+        # self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
+        self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=5, seed=42)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
