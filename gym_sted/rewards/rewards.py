@@ -167,3 +167,48 @@ class BoundedRewardCalculator(RewardCalculator):
         :returns : A `bool` whether the value is within the bounds
         """
         return self.bounds[obj_name]["min"] < value < self.bounds[obj_name]["max"]
+
+class NanodomainsRewardCalculator(RewardCalculator):
+    def __init__(self, objs, *args, **kwargs):
+        """
+        ***
+        I think this is the only rewards class I want. This will return a vector with the reward values for all 4
+        objectives. I will only use the reward value for Nanodomains identification as the explicit reward signal,
+        and use the 3 other objectives as info in the encoded representation of the Neural Net (or something)
+        ??? How do I know which idx in the returned list corresponds to which objective ???
+        ***
+
+        Instantiates the `RewardCalculator`
+
+        :param objs: A `dict` of objective
+        """
+        super().__init__(objs)
+        self.scales = kwargs.get("scales")
+
+    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg, threshold=2, *args, **kwargs):
+        """
+        Evaluates the objectives and returns whether all objectives are within
+        the predefined bounds
+
+        :param sted_stack: A list of STED images.
+        :param confocal_init: A confocal image acquired before the STED stack.
+        :param sted_fg: A background mask of the first STED image in the stack
+                        (2d array of bool: True on foreground, False on background).
+        :param confocal_fg: A background mask of the initial confocal image
+                            (2d array of bool: True on foreground, False on background).
+
+        :returns : A `list` of rewards
+        """
+        # maybe it would be better to make it a dict instead?
+        return self.rescale(self.objectives["NbNanodomains"].evaluate(
+                sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg, *args, **kwargs),
+                "NbNanodomains")
+
+    def rescale(self, value, obj_name):
+        """
+        Rescales the reward to be within approximately [0, 1] range
+
+        :param value: The value of the objective
+        :param obj_name: The name of the objective
+        """
+        return (value - self.scales[obj_name]["min"]) / (self.scales[obj_name]["max"] - self.scales[obj_name]["min"])

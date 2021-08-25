@@ -19,17 +19,20 @@ obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
     "Bleach" : objectives.Bleach(),
     "Resolution" : objectives.Resolution(pixelsize=20e-9),
-    "Squirrel" : objectives.Squirrel()
+    "Squirrel" : objectives.Squirrel(),
+    "NbNanodomains" : objectives.NumberNanodomains()
 }
 bounds_dict = {
     "SNR" : {"min" : 0.20, "max" : numpy.inf},
     "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 100}
+    "Resolution" : {"min" : 0, "max" : 100},
+    "NbNanodomains" : {"min" : 0, "max" : numpy.inf}
 }
 scales_dict = {
     "SNR" : {"min" : 0, "max" : 1},
     "Bleach" : {"min" : 0, "max" : 1},
-    "Resolution" : {"min" : 40, "max" : 180}
+    "Resolution" : {"min" : 40, "max" : 180},
+    "NbNanodomains" : {"min" : 0, "max" : 1}
 }
 action_spaces = {
     "p_sted" : {"low" : 0., "high" : 5.0e-3},
@@ -71,6 +74,7 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
         ))
 
         self.state = None
+        self.synapse = None
         self.initial_count = None
         self.current_step = 0
         self.max_num_requests = max_num_requests
@@ -222,10 +226,10 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
             setattr(self, key, value)
 
     def _update_datamap(self):
-        synapse = self.synapse_generator()
+        self.synapse = self.synapse_generator()
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
-                "whole_datamap" : synapse.frame,
+                "whole_datamap" : self.synapse.frame,
                 "datamap_pixelsize" : self.microscope_generator.pixelsize
             }
         )
@@ -299,7 +303,8 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_num_requests=1, max_episode_steps=10, select_final=False):
+                    max_num_requests=1, max_episode_steps=10, select_final=False,
+                    scale_rank_reward=False):
 
         self.actions = actions
         self.select_final = select_final
@@ -327,10 +332,12 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
 
         self.state = None
         self.initial_count = None
+        self.synapse = None
         self.current_step = 0
         self.max_num_requests = max_num_requests
         self.num_request_left = max_num_requests
         self.bleach_sampling = bleach_sampling
+        self.scale_rank_reward = scale_rank_reward
         self.current_articulation = -1
         self.episode_memory = {
             "actions" : [],
@@ -352,6 +359,11 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
         scales = OrderedDict({obj_name : scales_dict[obj_name] for obj_name in self.obj_names})
         self.mo_reward_calculator = rewards.MORewardCalculator(objs, bounds=bounds, scales=scales)
+        self.nb_reward_calculator = rewards.NanodomainsRewardCalculator(
+            {"NbNanodomains" : obj_dict["NbNanodomains"]},
+            bounds={"NbNanodomains" : bounds_dict["NbNanodomains"]},
+            scales={"NbNanodomains" : scales_dict["NbNanodomains"]}
+        )
 
         # Loads preference articulation model
         self.preference_articulation = PreferenceArticulator()
@@ -378,6 +390,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             done = False
             reward = 0
             mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+            # nb_obj = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
 
         elif main_action == 1:
             # Asking for preference
@@ -400,6 +413,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             # Acquire final image
             sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(imaging_action)
             mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+            nb_obj = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
 
             # Reward is proportionnal to the ranked position of the last image
             articulation, sorted_indices = self.preference_articulation.articulate(
@@ -408,6 +422,8 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             index = numpy.argmax(sorted_indices).item()
             # Reward is given by the position in the sorting
             reward = (index + 1) / len(sorted_indices)
+            if self.scale_rank_reward:
+                reward = reward * nb_obj
 
             done = True
 
@@ -503,10 +519,10 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             setattr(self, key, value)
 
     def _update_datamap(self):
-        synapse = self.synapse_generator()
+        self.synapse = self.synapse_generator()
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
-                "whole_datamap" : synapse.frame,
+                "whole_datamap" : self.synapse.frame,
                 "datamap_pixelsize" : self.microscope_generator.pixelsize
             }
         )
@@ -566,15 +582,13 @@ if __name__ == "__main__":
 
     from gym.envs.registration import EnvSpec
 
-    env = rankSTEDMultiObjectiveEnv(actions=["p_sted", "p_ex", "pdt"], bleach_sampling="uniform")
+    env = rankSTEDMultiObjectivesEnv(actions=["p_sted", "p_ex", "pdt"], bleach_sampling="uniform")
     env.spec = EnvSpec("STEDranking-v0", max_episode_steps=10)
     for i in range(10):
         obs = env.reset()
 
         while True:
-            start = time.time()
             obs, reward, done, info = env.step(env.action_space.sample())
-            print(time.time() - start)
             # print(obs[1])
             # obs, reward, done, info = env.step(numpy.array(i))
             # print(reward, info["mo_objs"], int(info["action"][-1]))

@@ -15,6 +15,8 @@ from skimage.transform import resize
 from skimage.feature import peak_local_max
 from sklearn.metrics import mean_squared_error
 
+import metrics
+
 class Objective(ABC):
     """Abstract class to implement an objective to optimize. When inheriting this class,
     one needs to define an attribute `label` to be used for figure labels, and a
@@ -346,32 +348,20 @@ class Squirrel(Objective):
         """
         return gaussian_filter(img * alpha + beta, sigma=sigma)
 
-class NumberNanodomains():
-    def __init__(self):
+class NumberNanodomains(Objective):
+    def __init__(self, threshold=2):
         # Do I need to inherit from the Objective class? this reward objective seems different from the others
-        self.label = "Nb Nanodomains"
-        self.select_optimal = None   # not sure what to put here
+        self.label = "NbNanodomains"
+        self.select_optimal = None   # not sure what to put here ?????
 
-    def evaluate(self, latest_acq, datamap):
-        """
-        Really unsure how I'm supposed to do this,
-        for now I  will pass the latest acquisition as input as well as the datamap
-        the datamap should have the real number of nanodomains as an attribute (VERIFY THIS)
-        I will do thresholding on the latest acq as the agent's guess to the number of nd
-        ???
-        """
-        # for this exp the datamap has to be a TemporalSynapseDmap object, so I can get the number of nanodomains
-        n_nanodomains_gt = len(datamap.synapse.nanodomains)
+        self.threshold = threshold
 
-        # for the agent's guess, I will do a thresholding thing for now, but I'm unsure if this is truly how I will want
-        # to proceed.
-        peak_id_coord = peak_local_max(latest_acq, min_distance=2, threshold_rel=0.5)
+    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg, *args, **kwargs):
+        synapse = kwargs.get("synapse")
 
-        n_nanodomains_agent_guess = len(peak_id_coord)
+        gt_coords = numpy.asarray(synapse.nanodomains_coords)
+        guess_coords = peak_local_max(sted_stack, min_distance=self.threshold, threshold_rel=0.5)
 
-        # now I have the ground truth and the agent's guess, how do I want to compute the reward?
-        # I think doing rwrd = 1 / (abs(guess - gt) + 1) is a good idea
-        # hmmmmmmm jpense que ici dans objective je devrais juste computer le nb de nd que l'agent guess (thresholding)
-        # et le calcul de la reward devra
-        reward = 1 / (numpy.abs(n_nanodomains_agent_guess - n_nanodomains_gt) + 1)
-        return reward
+        detector = metrics.CentroidDetectionError(gt_coords, guess_coords, self.threshold, algorithm="hungarian")
+        f1_score = detector.f1_score
+        return f1_score
