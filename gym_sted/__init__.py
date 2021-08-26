@@ -201,6 +201,17 @@ register(
     }
 )
 
+register(
+    id="STEDtimed-hard-v3",
+    entry_point="gym_sted.envs:timedExpSTEDEnv2Bump",
+    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    kwargs={
+        "reward_calculator" : "NanodomainsRewardCalculator",
+        "actions" : ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "normal"
+    }
+)
+
 """
 Follows the same implementation as v3, but the flashes are sampled from Theresa's data instead of hand crafted
 """
@@ -212,6 +223,17 @@ register(
         "reward_calculator" : "NanodomainsRewardCalculator",
         "actions" : ["pdt", "p_ex", "p_sted"],
         "bleach_sampling": "constant"
+    }
+)
+
+register(
+    id="STEDtimed-hard-v4",
+    entry_point="gym_sted.envs:timedExpSTEDEnv2SampledFlash",
+    max_episode_steps=50,   # for exp_time_us=500000 the max number of steps is 13, but I will prob change the exp time
+    kwargs={
+        "reward_calculator" : "NanodomainsRewardCalculator",
+        "actions" : ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "normal"
     }
 )
 
