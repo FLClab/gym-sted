@@ -164,6 +164,31 @@ register(
     }
 )
 
+# Ranking environment recurrent
+register(
+    id="MOSTEDranking-recurrent-easy-v0",
+    entry_point="gym_sted.envs:rankSTEDRecurrentMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant",
+        "select_final" : False,
+        "scale_rank_reward" : True
+    }
+)
+
+register(
+    id="MOSTEDranking-recurrent-hard-v0",
+    entry_point="gym_sted.envs:rankSTEDRecurrentMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal",
+        "select_final" : False,
+        "scale_rank_reward" : True
+    }
+)
+
 # Timed env for exp 2
 register(
     id="STEDtimed-v0",
