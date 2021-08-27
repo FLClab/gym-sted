@@ -304,10 +304,11 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_num_requests=1, max_episode_steps=10, select_final=False,
-                    scale_rank_reward=False):
+                    scale_rank_reward=False, scale_nanodomain_reward=1.):
 
         self.actions = actions
         self.select_final = select_final
+        self.scale_nanodomain_reward = scale_nanodomain_reward
 
         if self.select_final:
             self.action_space = spaces.Box(
@@ -386,11 +387,17 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
         if (main_action == 0) or (main_action == 1 and self.num_request_left <= 0):
             # Acquire an image with the given parameters
             sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(imaging_action)
+            mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+
+            # Reward is proportionnal to the ranked position of the last image
+            articulation, sorted_indices = self.preference_articulation.articulate(
+                self.episode_memory["mo_objs"] + [mo_objs]
+            )
+            index = numpy.argmax(sorted_indices).item()
+            # Reward is given by the position in the sorting
+            reward = (index + 1) / len(sorted_indices)
 
             done = False
-            reward = 0
-            mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-            # nb_obj = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
 
         elif main_action == 1:
             # Asking for preference
@@ -401,7 +408,6 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             fg_s = numpy.zeros(self.observation_space[0].shape[:-1])
             fg_c = numpy.zeros(self.observation_space[0].shape[:-1])
 
-            done = False
             reward = 1
             mo_objs = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
             self.num_request_left -= 1
@@ -409,21 +415,15 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             if len(self.episode_memory["mo_objs"]) > 0:
                 self.current_articulation, _ = self.preference_articulation.articulate(self.episode_memory["mo_objs"])
 
+            done = False
+
         elif main_action == 2:
             # Acquire final image
             sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(imaging_action)
             mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-            nb_obj = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
 
-            # Reward is proportionnal to the ranked position of the last image
-            articulation, sorted_indices = self.preference_articulation.articulate(
-                self.episode_memory["mo_objs"] + [mo_objs]
-            )
-            index = numpy.argmax(sorted_indices).item()
-            # Reward is given by the position in the sorting
-            reward = (index + 1) / len(sorted_indices)
-            if self.scale_rank_reward:
-                reward = reward * nb_obj
+            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = reward * self.scale_nanodomain_reward
 
             done = True
 
@@ -597,10 +597,11 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_num_requests=1, max_episode_steps=10, select_final=False,
-                    scale_rank_reward=False):
+                    scale_rank_reward=False, scale_nanodomain_reward=1.):
 
         self.actions = actions
         self.select_final = select_final
+        self.scale_nanodomain_reward = scale_nanodomain_reward
 
         if self.select_final:
             self.action_space = spaces.Box(
@@ -679,11 +680,17 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
         if (main_action == 0) or (main_action == 1 and self.num_request_left <= 0):
             # Acquire an image with the given parameters
             sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(imaging_action)
+            mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+
+            # Reward is proportionnal to the ranked position of the last image
+            articulation, sorted_indices = self.preference_articulation.articulate(
+                self.episode_memory["mo_objs"] + [mo_objs]
+            )
+            index = numpy.argmax(sorted_indices).item()
+            # Reward is given by the position in the sorting
+            reward = (index + 1) / len(sorted_indices)
 
             done = False
-            reward = 0
-            mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-            # nb_obj = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
 
         elif main_action == 1:
             # Asking for preference
@@ -694,7 +701,6 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
             fg_s = numpy.zeros(self.observation_space[0].shape[:-1])
             fg_c = numpy.zeros(self.observation_space[0].shape[:-1])
 
-            done = False
             reward = 1
             mo_objs = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
             self.num_request_left -= 1
@@ -702,21 +708,15 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
             if len(self.episode_memory["mo_objs"]) > 0:
                 self.current_articulation, _ = self.preference_articulation.articulate(self.episode_memory["mo_objs"])
 
+            done = False
+
         elif main_action == 2:
             # Acquire final image
             sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(imaging_action)
             mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-            nb_obj = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
 
-            # Reward is proportionnal to the ranked position of the last image
-            articulation, sorted_indices = self.preference_articulation.articulate(
-                self.episode_memory["mo_objs"] + [mo_objs]
-            )
-            index = numpy.argmax(sorted_indices).item()
-            # Reward is given by the position in the sorting
-            reward = (index + 1) / len(sorted_indices)
-            if self.scale_rank_reward:
-                reward = reward * nb_obj
+            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = reward * self.scale_nanodomain_reward
 
             done = True
 
@@ -883,7 +883,7 @@ if __name__ == "__main__":
             obs, reward, done, info = env.step(env.action_space.sample())
             # print(obs[1])
             # obs, reward, done, info = env.step(numpy.array(i))
-            # print(reward, info["mo_objs"], int(info["action"][-1]))
+            print(reward, info["mo_objs"], int(info["action"][-1]))
 
             if done:
                 print(f"Episode {i} done.\n")
