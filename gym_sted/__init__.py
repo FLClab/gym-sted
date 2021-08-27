@@ -120,6 +120,19 @@ register(
 )
 
 register(
+    id="MOSTEDranking-easy-v4",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant",
+        "select_final" : False,
+        "scale_rank_reward" : False,
+        "scale_nanodomain_reward" : 1.
+    }
+)
+
+register(
     id="MOSTEDranking-hard-v0",
     entry_point="gym_sted.envs:rankSTEDMultiObjectivesEnv",
     max_episode_steps=10,
@@ -164,6 +177,19 @@ register(
     }
 )
 
+register(
+    id="MOSTEDranking-hard-v4",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal",
+        "select_final" : False,
+        "scale_rank_reward" : False,
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
 # Ranking environment recurrent
 register(
     id="MOSTEDranking-recurrent-easy-v0",
@@ -186,6 +212,32 @@ register(
         "bleach_sampling" : "normal",
         "select_final" : False,
         "scale_rank_reward" : True
+    }
+)
+
+register(
+    id="MOSTEDranking-recurrent-easy-v1",
+    entry_point="gym_sted.envs:rankSTEDRecurrentMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant",
+        "select_final" : False,
+        "scale_rank_reward" : False,
+        "scale_nanodomain_reward" : 1.
+    }
+)
+
+register(
+    id="MOSTEDranking-recurrent-hard-v1",
+    entry_point="gym_sted.envs:rankSTEDRecurrentMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal",
+        "select_final" : False,
+        "scale_rank_reward" : False,
+        "scale_nanodomain_reward" : 1.
     }
 )
 

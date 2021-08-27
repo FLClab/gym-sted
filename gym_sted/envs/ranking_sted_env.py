@@ -304,10 +304,11 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_num_requests=1, max_episode_steps=10, select_final=False,
-                    scale_rank_reward=False):
+                    scale_rank_reward=False, scale_nanodomain_reward=1.):
 
         self.actions = actions
         self.select_final = select_final
+        self.scale_nanodomain_reward = scale_nanodomain_reward
 
         if self.select_final:
             self.action_space = spaces.Box(
@@ -422,6 +423,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
             reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = reward * self.scale_nanodomain_reward
 
             done = True
 
@@ -595,10 +597,11 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_num_requests=1, max_episode_steps=10, select_final=False,
-                    scale_rank_reward=False):
+                    scale_rank_reward=False, scale_nanodomain_reward=1.):
 
         self.actions = actions
         self.select_final = select_final
+        self.scale_nanodomain_reward = scale_nanodomain_reward
 
         if self.select_final:
             self.action_space = spaces.Box(
@@ -713,6 +716,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
             mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
             reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = reward * self.scale_nanodomain_reward
 
             done = True
 
