@@ -350,7 +350,7 @@ class timedExpSTEDEnv2Bump(gym.Env):
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
                  reward_calculator="NanodomainsRewardCalculator", bleach_sampling="constant"):
         self.bleach_sampling = bleach_sampling
-        self.synapse_generator = SynapseGenerator(mode="rand", n_nanodomains=(3, 15), n_molecs_in_domain=0, seed=None)
+        self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0, seed=None)
 
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
@@ -546,7 +546,7 @@ class timedExpSTEDEnv2Bump(gym.Env):
             phy_react=self.bleach_sampler.sample()
         )
 
-        synapse = self.synapse_generator.generate()
+        synapse = self.synapse_generator.generate(rotate=True)
 
         self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_smoother_flash(
             temporal_datamap = {
@@ -650,7 +650,7 @@ class timedExpSTEDEnv2SampledFlash(gym.Env):
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
                  reward_calculator="NanodomainsRewardCalculator", bleach_sampling="constant"):
         self.bleach_sampling = bleach_sampling
-        self.synapse_generator = SynapseGenerator(mode="rand", n_nanodomains=(3, 15), n_molecs_in_domain=0, seed=None)
+        self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0, seed=None)
 
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
@@ -845,7 +845,7 @@ class timedExpSTEDEnv2SampledFlash(gym.Env):
             phy_react=self.bleach_sampler.sample()
         )
 
-        synapse = self.synapse_generator.generate()
+        synapse = self.synapse_generator.generate(rotate=True)
 
         self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_sampled_flash(
             temporal_datamap = {
@@ -950,14 +950,17 @@ if __name__ == "__main__":
     # plt.imshow(info["sted_image"])
     # plt.show()
 
-    env = timedExpSTEDEnv2BumpHard(actions=["pdt", "p_ex", "p_sted"], bleach_sampling="normal")
-    # env = timedExpSTEDEnv2(actions=["pdt", "p_ex", "p_sted"])
+    env = timedExpSTEDEnv2Bump(actions=["pdt", "p_ex", "p_sted"], bleach_sampling="normal")
+    # env = timedExpSTEDEnv2SampledFlash(actions=["pdt", "p_ex", "p_sted"], bleach_sampling="normal")
     state = env.reset()
-    # plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
-    # plt.show()
-    # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
-    #     indices = {"flashes": t}
-    #     env.temporal_datamap.update_dicts(indices)
-    #     env.temporal_datamap.update_whole_datamap(t)
-    #     pyplot.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
-    #     pyplot.show()
+
+    # itérer à travers le flash, vérif que tout est beau pour les nds and shit
+    # faire ça pour Bump et SampledFlash
+    for t in range(env.temporal_datamap.flash_tstack.shape[0]):
+        indices = {"flashes": t}
+        env.temporal_datamap.update_whole_datamap(t)
+        env.temporal_datamap.update_dicts(indices)
+
+        plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+        plt.title(f"t = {t}")
+        plt.show()

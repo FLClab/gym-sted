@@ -43,7 +43,7 @@ class SynapseGenerator():
         """
         return self.generate()
 
-    def generate(self):
+    def generate(self, rotate=False):
         """
         Generates the molecule disposition
 
@@ -56,6 +56,8 @@ class SynapseGenerator():
                 self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
                 n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
             )
+            if rotate:
+                synapse.rotate_and_translate()
         return synapse
 
 class MoleculesGenerator():
