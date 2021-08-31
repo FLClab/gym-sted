@@ -348,7 +348,7 @@ class timedExpSTEDEnv2Bump(gym.Env):
     obj_names = ["Resolution", "Bleach", "SNR", "NbNanodomains"]
 
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
-                 reward_calculator="NanodomainsRewardCalculator", bleach_sampling="constant", detector_noise=100):
+                 reward_calculator="NanodomainsRewardCalculator", bleach_sampling="constant", detector_noise=0):
         self.bleach_sampling = bleach_sampling
         self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0, seed=None)
 
@@ -660,7 +660,7 @@ class timedExpSTEDEnv2SampledFlash(gym.Env):
     obj_names = ["Resolution", "Bleach", "SNR", "NbNanodomains"]
 
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
-                 reward_calculator="NanodomainsRewardCalculator", bleach_sampling="constant", detector_noise=100):
+                 reward_calculator="NanodomainsRewardCalculator", bleach_sampling="constant", detector_noise=0):
         self.bleach_sampling = bleach_sampling
         self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0, seed=None)
 
