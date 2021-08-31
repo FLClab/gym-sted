@@ -378,7 +378,7 @@ class timedExpSTEDEnv2Bump(gym.Env):
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
                        dtype=numpy.uint16),
-            spaces.Box(0, scales_dict["Resolution"]["max"], shape=(4,), dtype=numpy.float32)
+            spaces.Box(0, scales_dict["Resolution"]["max"], shape=(5,), dtype=numpy.float32)
         ))
 
 
@@ -471,7 +471,10 @@ class timedExpSTEDEnv2Bump(gym.Env):
             self.state.enqueue(sted_image)
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
             normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
-            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
+            laser_dose = sted_params["pdt"] * (sted_params["p_ex"] + sted_params["p_sted"])
+            laser_dose = laser_dose[0, 0]  # since the params are arrays
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"],
+                                          normalized_time, laser_dose])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
             return [observation, objective_vals], reward, done, info
@@ -538,7 +541,10 @@ class timedExpSTEDEnv2Bump(gym.Env):
             self.state.enqueue(sted_image)
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
             normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
-            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
+            laser_dose = sted_params["pdt"] * (sted_params["p_ex"] + sted_params["p_sted"])
+            laser_dose = laser_dose[0, 0]   # since the params are arrays
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"],
+                                          normalized_time, laser_dose])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
             return [observation, objective_vals], reward, done, info
@@ -598,7 +604,10 @@ class timedExpSTEDEnv2Bump(gym.Env):
         # faut aussi que je retourne le vecteur avec [SNR, Resolution, Bleach] ... how?
         # caluler les rewards avec MORewardsCalculator et utiliser ça I guess? ou juste retourne [0, 0, 0] ?
         normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
-        objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
+        laser_dose = conf_params["pdt"] * (conf_params["p_ex"] + conf_params["p_sted"])
+        laser_dose = laser_dose
+        objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"],
+                                      normalized_time, laser_dose])
         return [numpy.transpose(self.state.to_array(), (1, 2, 0)), objective_vals]
 
     def render(self, info, mode='human'):
@@ -681,7 +690,7 @@ class timedExpSTEDEnv2SampledFlash(gym.Env):
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
                        dtype=numpy.uint16),
-            spaces.Box(0, scales_dict["Resolution"]["max"], shape=(4,), dtype=numpy.float32)
+            spaces.Box(0, scales_dict["Resolution"]["max"], shape=(5,), dtype=numpy.float32)
         ))
 
 
@@ -774,7 +783,10 @@ class timedExpSTEDEnv2SampledFlash(gym.Env):
             self.state.enqueue(sted_image)
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
             normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
-            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
+            laser_dose = sted_params["pdt"] * (sted_params["p_ex"] + sted_params["p_sted"])
+            laser_dose = laser_dose[0, 0]  # since the params are arrays
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"],
+                                          normalized_time, laser_dose])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
             return [observation, objective_vals], reward, done, info
@@ -841,7 +853,10 @@ class timedExpSTEDEnv2SampledFlash(gym.Env):
             self.state.enqueue(sted_image)
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
             normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
-            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
+            laser_dose = sted_params["pdt"] * (sted_params["p_ex"] + sted_params["p_sted"])
+            laser_dose = laser_dose[0, 0]  # since the params are arrays
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"],
+                                          normalized_time, laser_dose])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
             return [observation, objective_vals], reward, done, info
@@ -900,7 +915,10 @@ class timedExpSTEDEnv2SampledFlash(gym.Env):
         # faut aussi que je retourne le vecteur avec [SNR, Resolution, Bleach] ... how?
         # caluler les rewards avec MORewardsCalculator et utiliser ça I guess? ou juste retourne [0, 0, 0] ?
         normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
-        objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
+        laser_dose = conf_params["pdt"] * (conf_params["p_ex"] + conf_params["p_sted"])
+        laser_dose = laser_dose
+        objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"],
+                                      normalized_time, laser_dose])
         return [numpy.transpose(self.state.to_array(), (1, 2, 0)), objective_vals]
 
     def render(self, info, mode='human'):
@@ -956,11 +974,17 @@ if __name__ == "__main__":
     # plt.imshow(info["sted_image"])
     # plt.show()
 
-    # env = timedExpSTEDEnv2Bump(actions=["pdt", "p_ex", "p_sted"], bleach_sampling="normal")
-    env = timedExpSTEDEnv2SampledFlash(actions=["pdt", "p_ex", "p_sted"], bleach_sampling="normal")
+    env = timedExpSTEDEnv2Bump(actions=["pdt", "p_ex", "p_sted"], bleach_sampling="normal")
+    # env = timedExpSTEDEnv2SampledFlash(actions=["pdt", "p_ex", "p_sted"], bleach_sampling="normal")
+    """
+    ajouter la dose de laser en signal retourné et faire jouer un épisode pour m'assurer que ça plante pas
+    """
     state = env.reset()
-    print(env.microscope.detector.background)
-
+    done = False
+    while not done:
+        print("stepping!")
+        obs, r, done, info = env.step([10, 10, 10])
+    print("done stepping")
     # itérer à travers le flash, vérif que tout est beau pour les nds and shit
     # faire ça pour Bump et SampledFlash
     # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
