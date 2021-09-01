@@ -351,7 +351,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
 
         self.seed()
 
-        self.synapse_generator = SynapseGenerator(mode="rand", seed=None)
+        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
         self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
@@ -644,7 +644,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
 
         self.seed()
 
-        self.synapse_generator = SynapseGenerator(mode="rand", seed=None)
+        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
         self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
