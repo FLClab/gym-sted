@@ -8,29 +8,33 @@ from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
+import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler
 from gym_sted.rewards import objectives
-
+from gym_sted.prefnet import PreferenceArticulator
 
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
     "Bleach" : objectives.Bleach(),
     "Resolution" : objectives.Resolution(pixelsize=20e-9),
-    "Squirrel" : objectives.Squirrel()
+    "Squirrel" : objectives.Squirrel(),
+    "NbNanodomains" : objectives.NumberNanodomains()
 }
 bounds_dict = {
     "SNR" : {"min" : 0.20, "max" : numpy.inf},
     "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 80}
+    "Resolution" : {"min" : 0, "max" : 100},
+    "NbNanodomains" : {"min" : 0, "max" : numpy.inf}
 }
 scales_dict = {
     "SNR" : {"min" : 0, "max" : 1},
     "Bleach" : {"min" : 0, "max" : 1},
-    "Resolution" : {"min" : 40, "max" : 180}
+    "Resolution" : {"min" : 40, "max" : 180},
+    "NbNanodomains" : {"min" : 0, "max" : 1}
 }
 action_spaces = {
-    "p_sted" : {"low" : 5.0e-6, "high" : 5.0e-3},
+    "p_sted" : {"low" : 0., "high" : 5.0e-3},
     "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},
     "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
 }
@@ -435,6 +439,266 @@ class DebugBleachSTEDTimedEnv(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+
+    def close(self):
+        return None
+
+class DebugRankSTEDRecurrentMultiObjectivesEnv(gym.Env):
+    """
+    Creates a `rankSTEDRecurrentMultiObjectivesEnv`
+
+    Action space
+        The action space is a tuple, where
+        1. The imaging parameter selection
+        2. The action to choose from
+            {0: Acquire image, 1: Ask for expert knowledge, 2: Final parameters}
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_num_requests=1, max_episode_steps=10, select_final=False,
+                    scale_rank_reward=False, scale_nanodomain_reward=1.):
+
+        self.actions = actions
+        self.select_final = select_final
+        self.scale_nanodomain_reward = scale_nanodomain_reward
+
+        if self.select_final:
+            self.action_space = spaces.Box(
+                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
+                dtype=numpy.float32
+            )
+        else:
+            self.action_space = spaces.Box(
+                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [1 + 1]),
+                dtype=numpy.float32
+            )
+
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(
+                0, 1, shape=(max_episode_steps + len(self.obj_names) + len(self.actions),),
+                dtype=numpy.float32
+            ) # Articulation, shape is given by articulation vector, objectives, actions
+        ))
+
+        self.state = None
+        self.initial_count = None
+        self.synapse = None
+        self.current_step = 0
+        self.max_num_requests = max_num_requests
+        self.num_request_left = max_num_requests
+        self.bleach_sampling = bleach_sampling
+        self.scale_rank_reward = scale_rank_reward
+        self.current_articulation = -1
+        self.episode_memory = {
+            "actions" : [],
+            "mo_objs" : [],
+            "reward" : [],
+        }
+
+        self.datamap = None
+        self.viewer = None
+
+        self.seed()
+
+        self.synapse_generator = SynapseGenerator(mode="rand", seed=None)
+        self.microscope_generator = MicroscopeGenerator()
+        self.microscope = self.microscope_generator.generate_microscope()
+        self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
+
+        objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
+        bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
+        scales = OrderedDict({obj_name : scales_dict[obj_name] for obj_name in self.obj_names})
+        self.mo_reward_calculator = rewards.MORewardCalculator(objs, bounds=bounds, scales=scales)
+        self.nb_reward_calculator = rewards.NanodomainsRewardCalculator(
+            {"NbNanodomains" : obj_dict["NbNanodomains"]},
+            bounds={"NbNanodomains" : bounds_dict["NbNanodomains"]},
+            scales={"NbNanodomains" : scales_dict["NbNanodomains"]}
+        )
+
+        # Loads preference articulation model
+        self.preference_articulation = PreferenceArticulator()
+
+    def step(self, action):
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.nan_to_num(action)
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+        if self.select_final:
+            imaging_action, main_action = action[:len(self.actions)], min(int(action[-1]), 2)
+        else:
+            imaging_action, main_action = action[:len(self.actions)], min(int(action[-1]), 1)
+
+        # On the last step of the environment we enforce the final decision
+        if self.current_step >= self.spec.max_episode_steps - 1:
+            main_action = 2
+
+        if (main_action == 0) or (main_action == 1 and self.num_request_left <= 0):
+            # Acquire an image with the given parameters
+            sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(imaging_action)
+            mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+
+            # Reward is proportionnal to the ranked position of the last image
+            articulation, sorted_indices = self.preference_articulation.articulate(
+                self.episode_memory["mo_objs"] + [mo_objs]
+            )
+            index = numpy.argmax(sorted_indices).item()
+            # Reward is given by the position in the sorting
+            reward = (index + 1) / len(sorted_indices)
+
+            done = False
+
+        elif main_action == 1:
+            # Asking for preference
+            sted_image = numpy.zeros(self.observation_space[0].shape[:-1])
+            bleached = numpy.zeros(self.observation_space[0].shape[:-1])
+            conf1 = numpy.zeros(self.observation_space[0].shape[:-1])
+            conf2 = numpy.zeros(self.observation_space[0].shape[:-1])
+            fg_s = numpy.zeros(self.observation_space[0].shape[:-1])
+            fg_c = numpy.zeros(self.observation_space[0].shape[:-1])
+
+            reward = 1
+            mo_objs = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
+            self.num_request_left -= 1
+
+            if len(self.episode_memory["mo_objs"]) > 0:
+                self.current_articulation, _ = self.preference_articulation.articulate(self.episode_memory["mo_objs"])
+
+            done = False
+
+        elif main_action == 2:
+            # Acquire final image
+            sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(imaging_action)
+            mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+
+            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = reward * self.scale_nanodomain_reward
+
+            done = True
+
+        else:
+            raise NotImplementedError("Only 3 actions supported...")
+
+        # Updates memory
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(imaging_action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "articulation" : self.current_articulation
+        }
+        if self.current_articulation == -1:
+            articulation = numpy.zeros((self.spec.max_episode_steps, ))
+        else:
+            articulation = numpy.eye(self.spec.max_episode_steps)[self.current_articulation]
+
+        # Build the observation space
+        obs = []
+        obs.extend(articulation)
+        obs.extend(self.episode_memory["actions"][-1])
+        obs.extend(self.episode_memory["mo_objs"][-1])
+        obs = numpy.array(obs)
+
+        return (self.state, obs), reward, done, info
+
+    def reset(self):
+        """
+        Resets the environment with a new datamap
+
+        :returns : A `numpy.ndarray` of the molecules
+        """
+        # Updates the current bleach function
+        self.microscope = self.microscope_generator.generate_microscope(
+            phy_react=self.bleach_sampler.sample()
+        )
+
+        self.num_request_left = self.max_num_requests
+        self.current_step = 0
+        self.current_articulation = -1
+        self.episode_memory = {
+            "actions" : [],
+            "mo_objs" : [],
+            "reward" : [],
+        }
+
+        state = self._update_datamap()
+
+        self.state = state[..., numpy.newaxis]
+        return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
+
+    def render(self, info, mode='human'):
+        """
+        Renders the environment
+
+        :param info: A `dict` of data
+        :param mode: A `str` of the available mode
+        """
+        fig, axes = pyplot.subplots(1, 3, figsize=(10,3), sharey=True, sharex=True)
+
+        axes[0].imshow(info["conf1"])
+        axes[0].set_title(f"Datamap roi")
+
+        axes[1].imshow(info["bleached"])
+        axes[1].set_title(f"Bleached datamap")
+
+        axes[2].imshow(info["sted_image"])
+        axes[2].set_title(f"Acquired signal (photons)")
+
+        pyplot.show(block=True)
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+    def update_(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def _update_datamap(self):
+        self.synapse = self.synapse_generator(rotate=True)
+        self.datamap = self.microscope_generator.generate_datamap(
+            datamap = {
+                "whole_datamap" : self.synapse.frame,
+                "datamap_pixelsize" : self.microscope_generator.pixelsize
+            }
+        )
+        state = numpy.random.randint(0, 2 ** 16, self.observation_space[0].shape[:-1], dtype=numpy.uint16)
+        return state
+
+    def _acquire(self, action):
+
+        sted_image = numpy.random.randint(0, 2 ** 16, self.observation_space[0].shape[:-1], dtype=numpy.uint16)
+        bleached = numpy.random.randint(0, 2 ** 16, self.observation_space[0].shape[:-1], dtype=numpy.uint16)
+        conf1 = numpy.random.randint(0, 2 ** 16, self.observation_space[0].shape[:-1], dtype=numpy.uint16)
+        conf2 = numpy.random.randint(0, 2 ** 16, self.observation_space[0].shape[:-1], dtype=numpy.uint16)
+        fg_s = numpy.random.randint(0, 2, self.observation_space[0].shape[:-1], dtype=bool)
+        fg_c = numpy.random.randint(0, 2, self.observation_space[0].shape[:-1], dtype=bool)
+
+        return sted_image, bleached, conf1, conf2, fg_s, fg_c
 
     def close(self):
         return None

@@ -35,15 +35,15 @@ class SynapseGenerator():
         self.mode = mode
         self.seed = seed
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         """
         Implements the `call` method of the class.
 
         :returns : A `numpy.ndarray` of the molecules
         """
-        return self.generate()
+        return self.generate(*args, **kwargs)
 
-    def generate(self, rotate=False):
+    def generate(self, rotate=False, *args, **kwargs):
         """
         Generates the molecule disposition
 

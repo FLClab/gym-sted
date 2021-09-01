@@ -338,6 +338,20 @@ register(
 )
 
 register(
+    id='STEDdebugRecurrent-v0',
+    entry_point='gym_sted.envs:DebugRankSTEDRecurrentMultiObjectivesEnv',
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal",
+        "select_final" : False,
+        "scale_rank_reward" : False,
+        "scale_nanodomain_reward" : 1.
+    }    
+)
+
+
+register(
     id='TimedSTEDdebugBleach-v0',
     entry_point='gym_sted.envs:DebugBleachSTEDTimedEnv',
     # does this correspond to the max number of steps in an episode? If so what is this value in my case?

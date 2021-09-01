@@ -519,7 +519,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             setattr(self, key, value)
 
     def _update_datamap(self):
-        self.synapse = self.synapse_generator()
+        self.synapse = self.synapse_generator(rotate=True)
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
                 "whole_datamap" : self.synapse.frame,
@@ -667,6 +667,8 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
         # Action is an array of size self.actions and main_action
         # main action should be in the [0, 1, 2]
         # We manually clip the actions which are out of action space
+        # We ensure that the action values are numbers
+        action = numpy.nan_to_num(action)
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
         if self.select_final:
             imaging_action, main_action = action[:len(self.actions)], min(int(action[-1]), 2)
@@ -811,7 +813,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(gym.Env):
             setattr(self, key, value)
 
     def _update_datamap(self):
-        self.synapse = self.synapse_generator()
+        self.synapse = self.synapse_generator(rotate=True)
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
                 "whole_datamap" : self.synapse.frame,
