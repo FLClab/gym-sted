@@ -5,6 +5,7 @@ from gym.envs.registration import registry, register, make, spec
 register(
     id='STEDsum-v0',
     entry_point='gym_sted.envs:STEDEnv',
+    max_episode_steps=10,
     kwargs={
         "reward_calculator" : "SumRewardCalculator"
     }
@@ -13,6 +14,7 @@ register(
 register(
     id='STEDmultiply-v0',
     entry_point='gym_sted.envs:STEDEnv',
+    max_episode_steps=10,
     kwargs={
         "reward_calculator" : "MultiplyRewardCalculator"
     }
@@ -21,6 +23,7 @@ register(
 register(
     id='STEDbounded-v0',
     entry_point='gym_sted.envs:STEDEnv',
+    max_episode_steps=10,
     kwargs={
         "reward_calculator" : "BoundedRewardCalculator"
     }
@@ -29,6 +32,7 @@ register(
 register(
     id='STEDbounded-v1',
     entry_point='gym_sted.envs:STEDEnv',
+    max_episode_steps=10,
     kwargs={
         "reward_calculator" : "BoundedRewardCalculator",
         "actions" : ["p_sted", "p_ex", "pdt"]
@@ -395,7 +399,7 @@ register(
         "select_final" : False,
         "scale_rank_reward" : False,
         "scale_nanodomain_reward" : 1.
-    }    
+    }
 )
 
 

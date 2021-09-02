@@ -55,18 +55,25 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"],
-                    max_num_requests=1, max_episode_steps=10):
+                    max_num_requests=1, max_episode_steps=10, select_final=True):
 
-        self.synapse_generator = SynapseGenerator(mode="rand", seed=None)
+        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
         self.actions = actions
-        self.action_space = spaces.Box(
-            low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-            high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
-            dtype=numpy.float32
-        )
+        if self.select_final:
+            self.action_space = spaces.Box(
+                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
+                dtype=numpy.float32
+            )
+        else:
+            self.action_space = spaces.Box(
+                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [1 + 1]),
+                dtype=numpy.float32
+            )
 
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),

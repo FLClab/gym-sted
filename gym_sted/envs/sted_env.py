@@ -29,7 +29,7 @@ scales_dict = {
     "Resolution" : {"min" : 40, "max" : 180}
 }
 action_spaces = {
-    "p_sted" : {"low" : 5.0e-6, "high" : 5.0e-3},
+    "p_sted" : {"low" : 0., "high" : 50.0e-3},
     "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},
     "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
 }
@@ -45,7 +45,7 @@ class STEDEnv(gym.Env):
 
     def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"]):
 
-        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=42)
+        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
@@ -55,10 +55,14 @@ class STEDEnv(gym.Env):
             high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
             shape=(len(self.actions),), dtype=numpy.float32
         )
-        self.observation_space = spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16)
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(0, 1, shape=(len(self.obj_names) + len(self.actions),), dtype=numpy.float32)
+        ))
 
         self.state = None
         self.initial_count = None
+        self.current_step = 0
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
@@ -75,6 +79,91 @@ class STEDEnv(gym.Env):
 
         # We manually clip the actions which are out of action space
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire the image
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+
+        reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+
+        num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
+        print(action / action_spaces["p_sted"]["high"], num_killed)
+        done = (self.current_step >= self.spec.max_episode_steps) \
+                or (num_killed > 0.75)
+        observation = conf2[..., numpy.newaxis]
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "rewards" : rewards
+        }
+
+        self.current_step += 1
+
+        return (observation, numpy.array(rewards + action.tolist())), reward, done, info
+
+    def reset(self):
+        """
+        Resets the environment with a new datamap
+
+        :returns : A `numpy.ndarray` of the molecules
+        """
+        self.current_step = 0
+        state = self._update_datamap()
+        self.initial_count = self.datamap.whole_datamap.sum()
+
+        self.state = state[..., numpy.newaxis]
+        return (self.state, numpy.zeros((len(self.obj_names) + len(self.actions), )))
+
+    def render(self, info, mode='human'):
+        """
+        Renders the environment
+
+        :param info: A `dict` of data
+        :param mode: A `str` of the available mode
+        """
+        fig, axes = pyplot.subplots(1, 3, figsize=(10,3), sharey=True, sharex=True)
+
+        axes[0].imshow(info["conf1"])
+        axes[0].set_title(f"Datamap roi")
+
+        axes[1].imshow(info["bleached"]["base"][self.datamap.roi])
+        axes[1].set_title(f"Bleached datamap")
+
+        axes[2].imshow(info["sted_image"])
+        axes[2].set_title(f"Acquired signal (photons)")
+
+        pyplot.show(block=True)
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+    def update_(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def _update_datamap(self):
+        self.synapse = self.synapse_generator(rotate=True)
+        self.datamap = self.microscope_generator.generate_datamap(
+            datamap = {
+                "whole_datamap" : self.synapse.frame,
+                "datamap_pixelsize" : self.microscope_generator.pixelsize
+            }
+        )
+
+        # Acquire confocal image which sets the current state
+        conf_params = self.microscope_generator.generate_params()
+        state, _, _ = self.microscope.get_signal_and_bleach(
+            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
+        )
+        return state
+
+    def _acquire(self, action):
 
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
@@ -111,74 +200,7 @@ class STEDEnv(gym.Env):
         # remove STED foreground points not in confocal foreground, if any
         fg_s *= fg_c
 
-        reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-        rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-
-        done = True
-        observation = conf2[..., numpy.newaxis]
-        info = {
-            "action" : action,
-            "bleached" : bleached,
-            "sted_image" : sted_image,
-            "conf1" : conf1,
-            "conf2" : conf2,
-            "fg_c" : fg_c,
-            "fg_s" : fg_s,
-            "rewards" : rewards
-        }
-
-        return observation, reward, done, info
-
-    def reset(self):
-        """
-        Resets the environment with a new datamap
-
-        :returns : A `numpy.ndarray` of the molecules
-        """
-        molecules_disposition = self.synapse_generator()
-        self.datamap = self.microscope_generator.generate_datamap(
-            datamap = {
-                "whole_datamap" : molecules_disposition,
-                "datamap_pixelsize" : self.microscope_generator.pixelsize
-            }
-        )
-
-        # Acquire confocal image which sets the current state
-        conf_params = self.microscope_generator.generate_params()
-        self.state, _, _ = self.microscope.get_signal_and_bleach(
-            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
-        )
-
-        self.initial_count = molecules_disposition.sum()
-        return self.state[..., numpy.newaxis]
-
-    def render(self, info, mode='human'):
-        """
-        Renders the environment
-
-        :param info: A `dict` of data
-        :param mode: A `str` of the available mode
-        """
-        fig, axes = pyplot.subplots(1, 3, figsize=(10,3), sharey=True, sharex=True)
-
-        axes[0].imshow(info["conf1"])
-        axes[0].set_title(f"Datamap roi")
-
-        axes[1].imshow(info["bleached"]["base"][self.datamap.roi])
-        axes[1].set_title(f"Bleached datamap")
-
-        axes[2].imshow(info["sted_image"])
-        axes[2].set_title(f"Acquired signal (photons)")
-
-        pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
-    def update_(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        return sted_image, bleached["base"][self.datamap.roi], conf1, conf2, fg_s, fg_c
 
     def close(self):
         return None
