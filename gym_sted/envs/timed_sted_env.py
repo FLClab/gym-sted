@@ -46,7 +46,7 @@ action_spaces = {
 }
 
 
-class timedExpSTEDEnv2(gym.Env):
+class timedExpSTEDEnv(gym.Env):
     """
     Creates a 'STEDEnv'
 
@@ -368,7 +368,7 @@ class timedExpSTEDEnv2(gym.Env):
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
-    env = timedExpSTEDEnv2(actions=["pdt", "p_ex", "p_sted"], flash_mode="exp")
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="exp")
     state = env.reset()
     # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
     #     indices = {"flashes": t}
