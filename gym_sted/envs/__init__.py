@@ -1,6 +1,6 @@
 
 from gym_sted.envs.sted_env import STEDEnv
-from gym_sted.envs.ranking_sted_env import rankSTEDSingleObjectiveEnv, rankSTEDMultiObjectivesEnv, rankSTEDRecurrentMultiObjectivesEnv
+from gym_sted.envs.ranking_sted_env import rankSTEDSingleObjectiveEnv, rankSTEDMultiObjectivesEnv, rankSTEDRecurrentMultiObjectivesEnv, rankSTEDRecurrentMultiObjectivesWithArticulationEnv, rankSTEDMultiObjectivesWithArticulationEnv 
 from gym_sted.envs.timed_sted_env import timedExpSTEDEnv
 from gym_sted.envs.timed_sted_env2 import timedExpSTEDEnv2, timedExpSTEDEnv2Bump, timedExpSTEDEnv2SampledFlash
 from gym_sted.envs.timed_sted_env2_old import timedExpSTEDEnv2old

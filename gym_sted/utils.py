@@ -260,8 +260,8 @@ class BleachSampler:
             (50.0e-11, 25.0e-11),   # p_sted
         ]
         self.choices = [
-            (0.01e-7, 0.25e-7, 1.0e-7), # p_ex
-            (15.0e-11, 25.0e-11, 100.0e-11) # p_sted
+            (0.5e-7 - 0.25e-7, 0.5e-7, 0.5e-7 + 0.25e-7), # p_ex
+            (50.0e-11 - 25.0e-11, 50.0e-11, 50.0e-11 + 25.0e-11) # p_sted
         ]
         self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
 
