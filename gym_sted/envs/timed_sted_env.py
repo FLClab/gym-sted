@@ -14,17 +14,17 @@ from collections import OrderedDict
 import gym_sted
 from gym_sted import rewards, defaults
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, RecordingQueue, get_foreground, BleachSampler
-from gym_sted.rewards import objectives_timed2, rewards_timed2
+from gym_sted.rewards import objectives_timed, rewards_timed
 from gym_sted.prefnet import PreferenceArticulator
 
 # I will copy the values straight from Anthony's ranking_sted_env, need to think about what values
 # I actually want to use
 
 obj_dict = {
-    "SNR" : objectives_timed2.Signal_Ratio(75),
-    "Bleach" : objectives_timed2.Bleach(),
-    "Resolution" : objectives_timed2.Resolution(pixelsize=20e-9),
-    "NbNanodomains" : objectives_timed2.NumberNanodomains()
+    "SNR" : objectives_timed.Signal_Ratio(75),
+    "Bleach" : objectives_timed.Bleach(),
+    "Resolution" : objectives_timed.Resolution(pixelsize=20e-9),
+    "NbNanodomains" : objectives_timed.NumberNanodomains()
 }
 bounds_dict = {
     "SNR" : {"min" : 0.20, "max" : numpy.inf},
@@ -109,8 +109,8 @@ class timedExpSTEDEnv(gym.Env):
         objs = OrderedDict({obj_name: obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name: bounds_dict[obj_name] for obj_name in self.obj_names})
         scales = OrderedDict({obj_name: scales_dict[obj_name] for obj_name in self.obj_names})
-        self.reward_calculator = getattr(rewards_timed2, reward_calculator)(objs, bounds=bounds, scales=scales)
-        self._reward_calculator = rewards_timed2.MORewardCalculator(objs, bounds=bounds, scales=scales)
+        self.reward_calculator = getattr(rewards_timed, reward_calculator)(objs, bounds=bounds, scales=scales)
+        self._reward_calculator = rewards_timed.MORewardCalculator(objs, bounds=bounds, scales=scales)
 
         self.temporal_datamap = None
         self.viewer = None

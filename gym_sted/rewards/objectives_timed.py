@@ -2,22 +2,22 @@
 """This module contains classes that implement several objectives to optimize.
 One can define a new objective by inheriting abstract class :class:`Objective`.
 ***
-This implementation is for the objectives of the 2nd gym setting, in which datamaps evolve over time. Some details, such
-as bleaching computation, differ due to this, which is why the implementation here differs from the one in objectives.py
+This implementation is for the objectives of the 2nd version of the 2nd gym setting, in which datamaps evolve over time.
+Some details, such as bleaching computation, differ due to this, which is why the implementation here differs from the
+one in objectives.py
+In this second version, SNR, Resolution and Bleach are still objectives, but the Nanodomains identification will be the
+only objective used to compute rewards. The other objectives will be fed to the neural net as additional info
+(or something like that idk)
 ***
 """
 
 from abc import ABC, abstractmethod
 
 import numpy
-import itertools
 import warnings
 
-from scipy.ndimage import gaussian_filter
-from scipy import optimize
-from skimage.transform import resize
 from skimage.feature import peak_local_max
-from sklearn.metrics import mean_squared_error
+import metrics
 
 
 class Objective(ABC):
@@ -26,7 +26,8 @@ class Objective(ABC):
     function :func:`evaluate` to be called during optimization.
     """
     @abstractmethod
-    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap,
+                 threshold=2):
         """Compute the value of the objective given the result of an acquisition.
 
         :param sted_stack: A list of STED images.
@@ -71,7 +72,8 @@ class Signal_Ratio(Objective):
         self.select_optimal = numpy.argmax
         self.percentile = percentile
 
-    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap,
+                 threshold=2):
         """Compute the signal to noise ratio (SNR) given the result of an acquisition.
 
         :param sted_stack: A list of STED images.
@@ -105,7 +107,8 @@ class Bleach(Objective):
         self.label = "Bleach"
         self.select_optimal = numpy.argmin
 
-    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap,
+                 threshold=2):
         # in this case however I will want to reward for less bleaching, so 1 - bleach ?
         bleach = (n_molecs_init - n_molecs_post) / n_molecs_init
         return bleach
@@ -119,7 +122,8 @@ class Resolution(Objective):
 #            self.kwargs = kwargs
         self.res_cap = 250
 
-    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap,
+                 threshold=2):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             # res = self.decorrelation(image=sted_stack[0]) * self.pixelsize / 1e-9
@@ -300,25 +304,27 @@ class NumberNanodomains(Objective):
         self.label = "NbNanodomains"
         self.select_optimal = None   # not sure what to put here ?????
 
-    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap):
+    def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap,
+                 threshold=2):
         """
         Identify local maxima to 'guess' a number of nanodomains
         """
-        # for this exp the datamap has to be a TemporalSynapseDmap object, so I can get the number of nanodomains
-        n_nanodomains_gt = len(temporal_datamap.synapse.nanodomains)
+        gt_coords = numpy.asarray(temporal_datamap.synapse.nanodomains_coords)
+        guess_coords = peak_local_max(sted_stack, min_distance=threshold, threshold_rel=0.5)
 
-        # for the agent's guess, I will do a thresholding thing for now, but I'm unsure if this is truly how I will want
-        # to proceed.
-        # *** THIS ASSUMES THE 0TH ELT OF STED_STACK IS THE MOST RECENT, NEED TO VALIDATE THIS ***
-        # peak_id_coord = peak_local_max(sted_stack[0], min_distance=2, threshold_rel=0.5)
-        # I only pass 1 sted image so its not really a stack :)
-        peak_id_coord = peak_local_max(sted_stack, min_distance=2, threshold_rel=0.5)
-
-        n_nanodomains_agent_guess = len(peak_id_coord)
-
-        # now I have the ground truth and the agent's guess, how do I want to compute the reward?
-        # I think doing rwrd = 1 / (abs(guess - gt) + 1) is a good idea
-        # hmmmmmmm jpense que ici dans objective je devrais juste computer le nb de nd que l'agent guess (thresholding)
-        # et le calcul de la reward devra
-        reward = 1 / (numpy.abs(n_nanodomains_agent_guess - n_nanodomains_gt) + 1)
-        return reward
+        """
+        problème potentiel :
+        what if je start un acq pendant le flash, capable de bien résoudre les nanodomaines, mais genre au dernier
+        pixel de l'acq (pour un exemple extreme, ça pourrait être plus tôt) ça update les flash et les nanodomaines ne
+        sont plus actifs, ça me donnerait un reward de 0 malgré que les NDs sont biens résolus... hmm
+        --> Will this ever happen tho? le flash ne décroit pas de full bien résolvable à off en un step, donc je pense 
+            que le pire que ça va faire cest que je vais avoir un rwrd de 0 à place de genre 0.1 or something
+        --> Quand même important à garder en tête, pourrais peut-être causer des comportements indésirés, mais pour 
+            l'instant je vais garder cette implem
+        """
+        if temporal_datamap.nanodomains_active_currently:
+            detector = metrics.CentroidDetectionError(gt_coords, guess_coords, threshold, algorithm="hungarian")
+            f1_score = detector.f1_score
+        else:
+            f1_score = 0
+        return f1_score
