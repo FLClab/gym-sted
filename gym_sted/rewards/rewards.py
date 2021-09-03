@@ -114,7 +114,7 @@ class MultiplyRewardCalculator(RewardCalculator):
         :returns : A `list` of rewards
         """
         return numpy.prod([
-            1 - self.rescale(self.objectives[obj_name].evaluate([sted_image], conf1, conf2, fg_s, fg_c), obj_name)
+            max(0, 1 - self.rescale(self.objectives[obj_name].evaluate([sted_image], conf1, conf2, fg_s, fg_c), obj_name))
             if obj_name != "SNR" else self.rescale(self.objectives[obj_name].evaluate([sted_image], conf1, conf2, fg_s, fg_c), obj_name)
             for obj_name in self.objectives.keys()
         ]).item()
