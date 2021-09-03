@@ -87,9 +87,10 @@ class STEDEnv(gym.Env):
         rewards = self._reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
-        print(action / action_spaces["p_sted"]["high"], num_killed)
+        # print(action / action_spaces["p_sted"]["high"], num_killed)
         done = (self.current_step >= self.spec.max_episode_steps) \
-                or (num_killed > 0.75)
+                or (num_killed > 0.90)
+        # print(rewards, reward, done)
         observation = conf2[..., numpy.newaxis]
         info = {
             "action" : action,
