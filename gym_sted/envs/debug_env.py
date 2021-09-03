@@ -529,9 +529,14 @@ class DebugRankSTEDRecurrentMultiObjectivesEnv(gym.Env):
         # Loads preference articulation model
         self.preference_articulation = PreferenceArticulator()
 
+    def get_memory_usage(self):
+        import psutil, os
+        process = psutil.Process(os.getpid())
+        print("[----] Current memory usage : {:0.4f}%".format(process.memory_percent()))
+
     def step(self, action):
-        import psutil
-        print("[----] Current memory usage : {:0.4f}".format(psutil.virtual_memory().used / 1024 / 1024))
+
+        self.get_memory_usage()
 
         # Action is an array of size self.actions and main_action
         # main action should be in the [0, 1, 2]
