@@ -530,6 +530,8 @@ class DebugRankSTEDRecurrentMultiObjectivesEnv(gym.Env):
         self.preference_articulation = PreferenceArticulator()
 
     def step(self, action):
+        import psutil
+        print("[----] Current memory usage : {:0.4f}".format(psutil.virtual_memory().used / 1024 / 1024))
 
         # Action is an array of size self.actions and main_action
         # main action should be in the [0, 1, 2]
