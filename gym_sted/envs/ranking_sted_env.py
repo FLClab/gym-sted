@@ -405,7 +405,8 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
             "conf2" : conf2,
             "fg_c" : fg_c,
             "fg_s" : fg_s,
-            "mo_objs" : mo_objs
+            "mo_objs" : mo_objs,
+            "reward" : reward
         }
 
         # Build the observation space
@@ -571,7 +572,6 @@ class rankSTEDRecurrentMultiObjectivesEnv(rankSTEDMultiObjectivesEnv):
         # On the last step of the environment we enforce the final decision
         final_action = self.current_step >= self.spec.max_episode_steps - 1
 
-
         # Acquire an image with the given parameters
         sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
@@ -608,11 +608,12 @@ class rankSTEDRecurrentMultiObjectivesEnv(rankSTEDMultiObjectivesEnv):
             "conf2" : conf2,
             "fg_c" : fg_c,
             "fg_s" : fg_s,
-            "mo_objs" : mo_objs
+            "mo_objs" : mo_objs,
+            "reward" : reward
         }
 
         # Build the observation space
-        obs = numpy.concatenate((self.episode_memory["actions"][-1], self.episode_memory["actions"][-1]), axis=0)
+        obs = numpy.concatenate((self.episode_memory["actions"][-1], self.episode_memory["mo_objs"][-1]), axis=0)
 
         return (self.state, obs), reward, done, info
 
@@ -781,7 +782,8 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
             "fg_c" : fg_c,
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
-            "articulation" : self.current_articulation
+            "articulation" : self.current_articulation,
+            "reward" : reward
         }
         if self.current_articulation == -1:
             articulation = numpy.zeros((self.spec.max_episode_steps, ))
@@ -1076,7 +1078,8 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
             "fg_c" : fg_c,
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
-            "articulation" : self.current_articulation
+            "articulation" : self.current_articulation,
+            "reward" : reward
         }
         if self.current_articulation == -1:
             articulation = numpy.zeros((self.spec.max_episode_steps, ))
