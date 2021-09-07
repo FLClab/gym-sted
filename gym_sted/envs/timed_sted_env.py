@@ -13,7 +13,7 @@ from collections import OrderedDict
 
 import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, RecordingQueue, get_foreground
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, RecordingQueue, get_foreground, BleachSampler
 from gym_sted.rewards import objectives_timed, rewards_timed
 from gym_sted.prefnet import PreferenceArticulator
 
@@ -45,6 +45,7 @@ action_spaces = {
     "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
 }
 
+
 class timedExpSTEDEnv(gym.Env):
     """
     Creates a 'STEDEnv'
@@ -56,11 +57,23 @@ class timedExpSTEDEnv(gym.Env):
     obj_names = ["Resolution", "Bleach", "SNR", "NbNanodomains"]
 
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
-                 reward_calculator="MultiplyRewardCalculator"):
-        # self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=100, seed=42)
-        self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=7, n_molecs_in_domain=5, seed=42)
-        self.microscope_generator = MicroscopeGenerator()
+                 reward_calculator="NanodomainsRewardCalculator", bleach_sampling="constant", detector_noise=0,
+                 flash_mode="exp"):
+        valid_flash_modes = ["exp", "sampled"]
+        if flash_mode not in valid_flash_modes:
+            raise ValueError(f"flash mode {flash_mode} not valid, valid modes are exp or sampled")
+
+        self.flash_mode = flash_mode
+        self.bleach_sampling = bleach_sampling
+        self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0,
+                                                  seed=None)
+
+        self.microscope_generator = MicroscopeGenerator(
+            detector={"noise": True,
+                      "background": detector_noise}
+        )
         self.microscope = self.microscope_generator.generate_microscope()
+        self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
 
         self.actions = actions
         self.action_space = spaces.Box(
@@ -73,12 +86,17 @@ class timedExpSTEDEnv(gym.Env):
         self.dmap_shape = (64, 64)
         self.q_length = 4
         self.max_episode_steps = int(numpy.ceil(exp_time_us /
-                                                (self.dmap_shape[0] * self.dmap_shape[1] * action_spaces["pdt"]["low"] * 1e6)))
+                                                (self.dmap_shape[0] * self.dmap_shape[1] * action_spaces["pdt"][
+                                                    "low"] * 1e6)))
         # since this is a temporal experiment, I think it would be relevant to have the last 4 acquisitions as the
         # observation of the state. Need to figure out how to do a first in first out thing for this
-        self.observation_space = spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
-                                            dtype=numpy.uint16)
-
+        # self.observation_space = spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
+        #                                     dtype=numpy.uint16)
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2 ** 16, shape=(self.dmap_shape[0], self.dmap_shape[1], self.q_length),
+                       dtype=numpy.uint16),
+            spaces.Box(0, scales_dict["Resolution"]["max"], shape=(4,), dtype=numpy.float32)
+        ))
 
         self.state = None
         self.initial_count = None
@@ -106,7 +124,22 @@ class timedExpSTEDEnv(gym.Env):
         self.seed()
 
     def step(self, action):
+        """
+        hmmmm
+        faque là il faudrait que je split ça en 2 actions, une qui serait du "monitoring" pour laquelle je ne compute
+        pas le nb de nanodomaines et la reward associée et une action "d'acquisition" pour laquelle je compute ça.
+        Dans les 2 cas, je veux envoyer le signal de SNR, Bleach, Resolution au NN, mais je veu juste obtenir une
+        reward quand je fais un guess sur le nombre de nanodomaines.
+        hmmmm
+        dont d'abord je devrais regarder comment envoyer le signal des 3 objs au neural net and shit
+        """
+        # Define a sted power under which we are in 'monitoring' mode, over which we are in 'detection' mode
+        p_sted_threshold = 5e-4
+
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # là il faut que je regarde si la puissance sted est under/over le threshold pour décider comment retourner la
+        # reward. Il faut aussi que je regarde l'affaire avec le pdt :)
 
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
@@ -139,7 +172,7 @@ class timedExpSTEDEnv(gym.Env):
             done = True
             info = {
                 "action": action,
-                "bleached": None,   # not sure what to do here, will this cause problems? hope not :)
+                "bleached": None,  # not sure what to do here, will this cause problems? hope not :)
                 "sted_image": sted_image,
                 "conf1": conf1,
                 "fg_c": fg_c,
@@ -153,12 +186,16 @@ class timedExpSTEDEnv(gym.Env):
             # faut que j'update mon state avec ma plus récente acq :)
             self.state.enqueue(sted_image)
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
+            normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
-            return observation, reward[0], done, info
+            return [observation, objective_vals], reward, done, info
 
         else:
             # case where the agent can image at least one pixel given the time left in the exp and selected pdt
+
+            # FAUT QUE JE SPLIT ÇA EN 2 CAS, UN POUR LE MONITORING ET UN POUR LE DETECTION
 
             conf_params = self.microscope_generator.generate_params()
 
@@ -184,14 +221,21 @@ class timedExpSTEDEnv(gym.Env):
             # remove STED foreground points not in confocal foreground, if any
             fg_s *= fg_c
 
-            # this is the scalarized reward
-            reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
-                                                     self.temporal_datamap)
             # this is the vector of individual rewards for individual objectives
             rewards = self._reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
                                                        self.temporal_datamap)
 
-            done = self.temporal_experiment.clock.current_time >= self.exp_time_us
+            # compute rewards differently for monitoring or detection mode
+            if sted_params["p_sted"] < p_sted_threshold:  # monitoring
+                reward = 0
+                rewards["NbNanodomains"] = 0
+            else:  # detection
+                # this is the scalarized reward
+                reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                         self.temporal_datamap)
+
+            n_molecules_total = numpy.sum(self.temporal_datamap.whole_datamap)
+            done = self.temporal_experiment.clock.current_time >= self.exp_time_us or n_molecules_total == 0
 
             info = {
                 "action": action,
@@ -209,27 +253,50 @@ class timedExpSTEDEnv(gym.Env):
             # faut que j'update mon state avec ma plus récente acq :)
             self.state.enqueue(sted_image)
             observation = numpy.transpose(self.state.to_array(), (1, 2, 0))
+            normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
+            objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
 
             # ~!* RETURN DLA SCRAP ICITTE *!~
-            return observation, reward, done, info
+            return [observation, objective_vals], reward, done, info
 
     def reset(self):
-        synapse = self.synapse_generator.generate()
-
-        self.temporal_datamap = self.microscope_generator.generate_temporal_datamap(
-            temporal_datamap = {
-                "whole_datamap" : synapse.frame,
-                "datamap_pixelsize" : self.microscope_generator.pixelsize,
-                "synapse_obj": synapse
-            },
-            decay_time_us=self.exp_time_us,
-            n_decay_steps=20
+        self.microscope = self.microscope_generator.generate_microscope(
+            phy_react=self.bleach_sampler.sample()
         )
 
+        synapse = self.synapse_generator.generate(rotate=True)
+
+        if self.flash_mode == "sampled":
+            self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_sampled_flash(
+                temporal_datamap={
+                    "whole_datamap": synapse.frame,
+                    "datamap_pixelsize": self.microscope_generator.pixelsize,
+                    "synapse_obj": synapse
+                },
+                decay_time_us=self.exp_time_us,
+                n_decay_steps=20,
+                flash_delay=(2, 8)
+            )
+        elif self.flash_mode == "exp":
+            self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_smoother_flash(
+                temporal_datamap={
+                    "whole_datamap": synapse.frame,
+                    "datamap_pixelsize": self.microscope_generator.pixelsize,
+                    "synapse_obj": synapse
+                },
+                decay_time_us=self.exp_time_us,
+                n_decay_steps=20,
+                flash_delay=(2, 8)
+            )
+        else:
+            raise ValueError(f"flash mode {self.flash_mode} is not a valid mode, valid modes are exp or sampled")
+
+        n_molecs_init = self.temporal_datamap.base_datamap.sum()
         conf_params = self.microscope_generator.generate_params()
         first_acq, _, _ = self.microscope.get_signal_and_bleach(
             self.temporal_datamap, self.temporal_datamap.pixelsize, **conf_params, bleach=False
         )
+        n_molecs_post = self.temporal_datamap.base_datamap.sum()
         # for the state, fill a queue with the first observation,
         # If I only add it once to the Q the head will point to an array of zeros until the Q is filled,
         # which is not what I want
@@ -242,10 +309,27 @@ class timedExpSTEDEnv(gym.Env):
 
         self.clock = pysted.base.Clock(self.time_quantum_us)
         self.temporal_experiment = pysted.base.TemporalExperiment(self.clock, self.microscope, self.temporal_datamap,
-                                                                  self.exp_time_us, bleach=True)
+                                                                  self.exp_time_us, bleach=True,
+                                                                  bleach_mode="proportional")
 
-        # I think this is how I need to return it to ensure the right shape so it can go through the nn
-        return numpy.transpose(self.state.to_array(), (1, 2, 0))
+        # foreground on confocal image
+        fg_c = get_foreground(first_acq)
+        # foreground on sted image
+        if numpy.any(first_acq):
+            fg_s = get_foreground(first_acq)
+        else:
+            fg_s = numpy.ones_like(fg_c)
+        # remove STED foreground points not in confocal foreground, if any
+        fg_s *= fg_c
+
+        rewards = self._reward_calculator.evaluate(first_acq, first_acq, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                   self.temporal_datamap)
+
+        # faut aussi que je retourne le vecteur avec [SNR, Resolution, Bleach] ... how?
+        # caluler les rewards avec MORewardsCalculator et utiliser ça I guess? ou juste retourne [0, 0, 0] ?
+        normalized_time = self.temporal_experiment.clock.current_time / self.temporal_experiment.exp_runtime
+        objective_vals = numpy.array([rewards["SNR"], rewards["Resolution"], rewards["Bleach"], normalized_time])
+        return [numpy.transpose(self.state.to_array(), (1, 2, 0)), objective_vals]
 
     def render(self, info, mode='human'):
         """
@@ -281,13 +365,22 @@ class timedExpSTEDEnv(gym.Env):
         return None
 
 
-
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
-    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"])
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="exp")
     state = env.reset()
-    env.clock.current_time = 2000000 - 150
-    obs, reward, done, info = env.step([10, 10, 0.00005])
-    print(f"info = {info}")
-    print(f"reward = {reward}")
+    # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
+    #     indices = {"flashes": t}
+    #     env.temporal_datamap.update_whole_datamap(t)
+    #     env.temporal_datamap.update_dicts(indices)
+    #
+    #     plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+    #     plt.title(f"t = {t}")
+    #     plt.show()
+
+    done = False
+    while not done:
+        print("stepping!")
+        obs, r, done, info = env.step([10, 10, 10])
+    print("done stepping")
