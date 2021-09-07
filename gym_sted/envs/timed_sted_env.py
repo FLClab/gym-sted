@@ -38,12 +38,7 @@ scales_dict = {
     "Resolution" : {"min" : 40, "max" : 180},
     "NbNanodomains" : {"min" : 0, "max" : 1}   # ???
 }
-action_spaces = {
-    # changed p_sted low to 0 as I want to 0. as I want to take confocals if the flash is not yet happening
-    "p_sted" : {"low" : 0., "high" : 5.0e-3},
-    "p_ex" : {"low" : 0., "high" : 5.0e-6},   # jveux tu lui laisser prendre un p_ex = 0 ? ferait la wait action...
-    "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
-}
+action_spaces = defaults.action_spaces
 
 
 class timedExpSTEDEnv(gym.Env):
