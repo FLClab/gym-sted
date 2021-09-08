@@ -61,7 +61,7 @@ class timedExpSTEDEnv(gym.Env):
         self.flash_mode = flash_mode
         self.bleach_sampling = bleach_sampling
         self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0,
-                                                  seed=None)
+                                                  seed=42)
 
         self.microscope_generator = MicroscopeGenerator(
             detector={"noise": True,
@@ -364,6 +364,7 @@ if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
     env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="exp")
+    # env.seed(42)
     state = env.reset()
     # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
     #     indices = {"flashes": t}
@@ -373,6 +374,7 @@ if __name__ == "__main__":
     #     plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
     #     plt.title(f"t = {t}")
     #     plt.show()
+    # exit()
 
     done = False
     while not done:
