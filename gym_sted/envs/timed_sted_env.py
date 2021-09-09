@@ -270,7 +270,8 @@ class timedExpSTEDEnv(gym.Env):
                 },
                 decay_time_us=self.exp_time_us,
                 n_decay_steps=20,
-                flash_delay=(2, 8)
+                flash_delay=(0, 2),
+                individual_flashes=True
             )
         elif self.flash_mode == "exp":
             self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_smoother_flash(
@@ -364,7 +365,7 @@ class timedExpSTEDEnv(gym.Env):
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
-    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="exp")
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="sampled")
     # env.seed(42)
     state = env.reset()
     for t in range(env.temporal_datamap.flash_tstack.shape[0]):
