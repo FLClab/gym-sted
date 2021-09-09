@@ -281,7 +281,8 @@ class timedExpSTEDEnv(gym.Env):
                 },
                 decay_time_us=self.exp_time_us,
                 n_decay_steps=20,
-                flash_delay=(2, 8)
+                flash_delay=(2, 8),
+                individual_flashes=True
             )
         else:
             raise ValueError(f"flash mode {self.flash_mode} is not a valid mode, valid modes are exp or sampled")
@@ -366,15 +367,15 @@ if __name__ == "__main__":
     env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="exp")
     # env.seed(42)
     state = env.reset()
-    # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
-    #     indices = {"flashes": t}
-    #     env.temporal_datamap.update_whole_datamap(t)
-    #     env.temporal_datamap.update_dicts(indices)
-    #
-    #     plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
-    #     plt.title(f"t = {t}")
-    #     plt.show()
-    # exit()
+    for t in range(env.temporal_datamap.flash_tstack.shape[0]):
+        indices = {"flashes": t}
+        env.temporal_datamap.update_whole_datamap(t)
+        env.temporal_datamap.update_dicts(indices)
+
+        plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+        plt.title(f"t = {t}")
+        plt.show()
+    exit()
 
     done = False
     while not done:

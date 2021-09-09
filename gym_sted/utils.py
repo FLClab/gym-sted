@@ -195,13 +195,15 @@ class MicroscopeGenerator():
         decay_time_us = kwargs.get("decay_time_us", 1000000)
         n_decay_steps = kwargs.get("n_decay_steps", 10)
         flash_delay = kwargs.get("flash_delay", 2)
+        individual_flashes = kwargs.get("individual_flashes", False)
         # print(decay_time_us)
         # for now I will create a TestTemporalDmap obj, but eventually this should be a TemporalSynapseDmap obj
         i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
         # temporal_datamap = base.TestTemporalDmap(**temporal_datamap_params)
         temporal_datamap = base.TemporalSynapseDmap(**temporal_datamap_params)
         temporal_datamap.set_roi(i_ex, "max")
-        temporal_datamap.create_t_stack_dmap_smooth(decay_time_us, n_decay_steps=n_decay_steps, delay=flash_delay)
+        temporal_datamap.create_t_stack_dmap_smooth(decay_time_us, n_decay_steps=n_decay_steps, delay=flash_delay,
+                                                    individual_flashes=individual_flashes)
         temporal_datamap.update_whole_datamap(0)
 
         return temporal_datamap
