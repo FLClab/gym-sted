@@ -61,7 +61,7 @@ class timedExpSTEDEnv(gym.Env):
         self.flash_mode = flash_mode
         self.bleach_sampling = bleach_sampling
         self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0,
-                                                  seed=42)
+                                                  seed=None)
 
         self.microscope_generator = MicroscopeGenerator(
             detector={"noise": True,
