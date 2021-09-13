@@ -245,7 +245,7 @@ class timedExpSTEDEnv(gym.Env):
 
             info = {
                 "action": action,
-                "bleached": 0,
+                "bleached": bleached,
                 "sted_image": sted_image,
                 "conf1": conf1,
                 "fg_c": fg_c,
