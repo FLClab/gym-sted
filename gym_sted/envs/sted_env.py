@@ -100,7 +100,7 @@ class STEDEnv(gym.Env):
 
         self.current_step += 1
 
-        return (observation, numpy.array(rewards + action.tolist())), reward, done, info
+        return (observation, numpy.array(mo_objs + action.tolist())), reward, done, info
 
     def reset(self):
         """
@@ -178,13 +178,18 @@ class STEDEnv(gym.Env):
 
         # Acquire STED image
         sted_image, bleached, _ = self.microscope.get_signal_and_bleach(
-            self.datamap, self.datamap.pixelsize, **sted_params, bleach=True
+            self.datamap, self.datamap.pixelsize, **sted_params, bleach=False
         )
 
         # Acquire confocal image
         conf2, bleached, _ = self.microscope.get_signal_and_bleach(
             self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
         )
+
+        # automatically bleaches the datamap
+        normalized_p_sted = 1 - (sted_params["p_sted"] - defaults.action_spaces["p_sted"]["low"]) / (defaults.action_spaces["p_sted"]["high"] - defaults.action_spaces["p_sted"]["low"])
+        conf2 = conf2 * normalized_p_sted
+        self.datamap.whole_datamap = self.datamap.whole_datamap * normalized_p_sted
 
         # foreground on confocal image
         fg_c = get_foreground(conf1)
