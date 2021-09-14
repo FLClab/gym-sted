@@ -38,12 +38,7 @@ scales_dict = {
     "Resolution" : {"min" : 40, "max" : 180},
     "NbNanodomains" : {"min" : 0, "max" : 1}   # ???
 }
-action_spaces = {
-    # changed p_sted low to 0 as I want to 0. as I want to take confocals if the flash is not yet happening
-    "p_sted" : {"low" : 0., "high" : 5.0e-3},
-    "p_ex" : {"low" : 0., "high" : 5.0e-6},   # jveux tu lui laisser prendre un p_ex = 0 ? ferait la wait action...
-    "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
-}
+action_spaces = defaults.action_spaces
 
 
 class timedExpSTEDEnv(gym.Env):
@@ -170,9 +165,12 @@ class timedExpSTEDEnv(gym.Env):
                                                        self.temporal_datamap)
 
             done = True
+            flash_curve = [numpy.max(self.temporal_datamap.flash_tstack[t])
+                           for t in range(self.temporal_datamap.flash_tstack.shape[0])]
+
             info = {
                 "action": action,
-                "bleached": None,  # not sure what to do here, will this cause problems? hope not :)
+                "bleached": 0,
                 "sted_image": sted_image,
                 "conf1": conf1,
                 "fg_c": fg_c,
@@ -180,7 +178,12 @@ class timedExpSTEDEnv(gym.Env):
                 "rewards": rewards,
                 "pdt": action[self.actions.index("pdt")],
                 "p_ex": action[self.actions.index("p_ex")],
-                "p_sted": action[self.actions.index("p_sted")]
+                "p_sted": action[self.actions.index("p_sted")],
+                "ND_positions": numpy.asarray(self.temporal_datamap.synapse.nanodomains_coords),
+                "current_time": self.clock.current_time,
+                "flash_curve": flash_curve,
+                "base_datamap": self.unbleached_base_roi,
+                "flash_tstack": self.unbleached_flash_tstack_roi,
             }
 
             # faut que j'update mon state avec ma plus récente acq :)
@@ -237,6 +240,9 @@ class timedExpSTEDEnv(gym.Env):
             n_molecules_total = numpy.sum(self.temporal_datamap.whole_datamap)
             done = self.temporal_experiment.clock.current_time >= self.exp_time_us or n_molecules_total == 0
 
+            flash_curve = [numpy.max(self.temporal_datamap.flash_tstack[t])
+                           for t in range(self.temporal_datamap.flash_tstack.shape[0])]
+
             info = {
                 "action": action,
                 "bleached": bleached,
@@ -247,7 +253,12 @@ class timedExpSTEDEnv(gym.Env):
                 "rewards": rewards,
                 "pdt": action[self.actions.index("pdt")],
                 "p_ex": action[self.actions.index("p_ex")],
-                "p_sted": action[self.actions.index("p_sted")]
+                "p_sted": action[self.actions.index("p_sted")],
+                "ND_positions": numpy.asarray(self.temporal_datamap.synapse.nanodomains_coords),
+                "current_time": self.clock.current_time,
+                "flash_curve": flash_curve,
+                "base_datamap": self.unbleached_base_roi,
+                "flash_tstack": self.unbleached_flash_tstack_roi,
             }
 
             # faut que j'update mon state avec ma plus récente acq :)
@@ -275,7 +286,8 @@ class timedExpSTEDEnv(gym.Env):
                 },
                 decay_time_us=self.exp_time_us,
                 n_decay_steps=20,
-                flash_delay=(2, 8)
+                flash_delay=(0, 2),
+                individual_flashes=True
             )
         elif self.flash_mode == "exp":
             self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_smoother_flash(
@@ -286,10 +298,14 @@ class timedExpSTEDEnv(gym.Env):
                 },
                 decay_time_us=self.exp_time_us,
                 n_decay_steps=20,
-                flash_delay=(2, 8)
+                flash_delay=(2, 8),
+                individual_flashes=True
             )
         else:
             raise ValueError(f"flash mode {self.flash_mode} is not a valid mode, valid modes are exp or sampled")
+        self.unbleached_base_roi = self.temporal_datamap.base_datamap[self.temporal_datamap.roi]
+        self.unbleached_flash_tstack_roi = self.temporal_datamap.flash_tstack[:, self.temporal_datamap.roi[0],
+                                           self.temporal_datamap.roi[1]]
 
         n_molecs_init = self.temporal_datamap.base_datamap.sum()
         conf_params = self.microscope_generator.generate_params()
@@ -368,16 +384,18 @@ class timedExpSTEDEnv(gym.Env):
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
-    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="exp")
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="sampled")
+    # env.seed(42)
     state = env.reset()
-    # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
-    #     indices = {"flashes": t}
-    #     env.temporal_datamap.update_whole_datamap(t)
-    #     env.temporal_datamap.update_dicts(indices)
-    #
-    #     plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
-    #     plt.title(f"t = {t}")
-    #     plt.show()
+    for t in range(env.temporal_datamap.flash_tstack.shape[0]):
+        indices = {"flashes": t}
+        env.temporal_datamap.update_whole_datamap(t)
+        env.temporal_datamap.update_dicts(indices)
+
+        plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+        plt.title(f"t = {t}")
+        plt.show()
+    exit()
 
     done = False
     while not done:

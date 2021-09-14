@@ -109,8 +109,14 @@ class Bleach(Objective):
 
     def evaluate(self, sted_stack, confocal_init, sted_fg, confocal_fg, n_molecs_init, n_molecs_post, temporal_datamap,
                  threshold=2):
-        # in this case however I will want to reward for less bleaching, so 1 - bleach ?
-        bleach = (n_molecs_init - n_molecs_post) / n_molecs_init
+        # There is a RuntimeWarning: invalid value encountered in long_scalars that can happen
+        # From my tests, I think it happens when n_molecs_init = n_molecs_post = 0
+        # In that case, I think I want to set bleach to 100%, even if that action might not have bleached, since
+        # everything is already bleached, which is not good :)
+        if n_molecs_init == 0:
+            bleach = 1.0
+        else:
+            bleach = (n_molecs_init - n_molecs_post) / n_molecs_init
         return bleach
 
 
