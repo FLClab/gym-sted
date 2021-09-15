@@ -384,9 +384,13 @@ class timedExpSTEDEnv(gym.Env):
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
-    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="sampled")
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="sampled", bleach_sampling="normal")
+
+
     # env.seed(42)
     state = env.reset()
+    print(env.microscope.fluo.phy_react)
+    exit()
     # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
     #     indices = {"flashes": t}
     #     env.temporal_datamap.update_whole_datamap(t)
