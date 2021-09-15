@@ -41,7 +41,7 @@ scales_dict = {
 action_spaces = defaults.action_spaces
 
 
-class timedExpSTEDEnv(gym.Env):
+class timedExpSTEDEnvDebug(gym.Env):
     """
     Creates a 'STEDEnv'
 
@@ -325,7 +325,7 @@ class timedExpSTEDEnv(gym.Env):
 
         self.clock = pysted.base.Clock(self.time_quantum_us)
         self.temporal_experiment = pysted.base.TemporalExperiment(self.clock, self.microscope, self.temporal_datamap,
-                                                                  self.exp_time_us, bleach=True,
+                                                                  self.exp_time_us, bleach=False,
                                                                   bleach_mode="proportional")
 
         # foreground on confocal image
