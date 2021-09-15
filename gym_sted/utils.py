@@ -261,8 +261,8 @@ class BleachSampler:
             # (25.0e-11, 100e-11) # p_sted
 
             # this is the mean and standard deviation that should make us fall within the above limits :)
-            (0.5e-7, 0.25e-7),   # p_ex
-            (50.0e-11, 25.0e-11),   # p_sted
+            (0.25e-7, 0.5e-7),   # p_ex
+            (25.0e-11, 50.0e-11),   # p_sted
         ]
         self.choices = [
             (0.5e-7 - 0.25e-7, 0.5e-7, 0.5e-7 + 0.25e-7), # p_ex
