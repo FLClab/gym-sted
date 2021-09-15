@@ -34,11 +34,6 @@ scales_dict = {
     "Resolution" : {"min" : 40, "max" : 180},
     "NbNanodomains" : {"min" : 0, "max" : 1}
 }
-action_spaces = {
-    "p_sted" : {"low" : 0., "high" : 5.0e-3},
-    "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},
-    "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
-}
 
 class rankSTEDSingleObjectiveEnv(gym.Env):
     """
@@ -64,14 +59,14 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
         self.actions = actions
         if self.select_final:
             self.action_space = spaces.Box(
-                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
+                low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
                 dtype=numpy.float32
             )
         else:
             self.action_space = spaces.Box(
-                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [1 + 1]),
+                low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions] + [1 + 1]),
                 dtype=numpy.float32
             )
 
@@ -311,8 +306,8 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
 
         self.actions = actions
         self.action_space = spaces.Box(
-            low=numpy.array([action_spaces[name]["low"] for name in self.actions]),
-            high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
+            low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions]),
+            high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions]),
             dtype=numpy.float32
         )
 
@@ -646,14 +641,14 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
 
         if self.select_final:
             self.action_space = spaces.Box(
-                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
+                low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
                 dtype=numpy.float32
             )
         else:
             self.action_space = spaces.Box(
-                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [1 + 1]),
+                low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions] + [1 + 1]),
                 dtype=numpy.float32
             )
 
@@ -940,14 +935,14 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
 
         if self.select_final:
             self.action_space = spaces.Box(
-                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
+                low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions] + [2 + 1]),
                 dtype=numpy.float32
             )
         else:
             self.action_space = spaces.Box(
-                low=numpy.array([action_spaces[name]["low"] for name in self.actions] + [0]),
-                high=numpy.array([action_spaces[name]["high"] for name in self.actions] + [1 + 1]),
+                low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions] + [0]),
+                high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions] + [1 + 1]),
                 dtype=numpy.float32
             )
 

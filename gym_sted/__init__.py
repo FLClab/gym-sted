@@ -21,6 +21,16 @@ register(
 )
 
 register(
+    id='STEDmultiply-v1',
+    entry_point='gym_sted.envs:STEDEnv',
+    max_episode_steps=10,
+    kwargs={
+        "reward_calculator" : "MultiplyRewardCalculator",
+        "actions" : ["p_sted", "p_ex", "pdt"]
+    }
+)
+
+register(
     id='STEDmultiplyWithoutVision-v0',
     entry_point='gym_sted.envs:STEDEnvWithoutVision',
     max_episode_steps=10,

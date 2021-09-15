@@ -28,11 +28,6 @@ scales_dict = {
     "Bleach" : {"min" : 0, "max" : 1},
     "Resolution" : {"min" : 40, "max" : 180}
 }
-action_spaces = {
-    "p_sted" : {"low" : 0., "high" : 50.0e-3},
-    "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},
-    "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
-}
 
 class STEDEnv(gym.Env):
     """
@@ -51,8 +46,8 @@ class STEDEnv(gym.Env):
 
         self.actions = actions
         self.action_space = spaces.Box(
-            low=numpy.array([action_spaces[name]["low"] for name in self.actions]),
-            high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
+            low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions]),
+            high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions]),
             shape=(len(self.actions),), dtype=numpy.float32
         )
         self.observation_space = spaces.Tuple((
@@ -87,7 +82,7 @@ class STEDEnv(gym.Env):
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
         num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
-        # print(action / action_spaces["p_sted"]["high"], num_killed)
+        # print(action / defaults.action_spaces["p_sted"]["high"], num_killed)
         done = (self.current_step >= self.spec.max_episode_steps) \
                 or (num_killed > 0.90)
         # print(rewards, reward, done)
@@ -105,7 +100,7 @@ class STEDEnv(gym.Env):
 
         self.current_step += 1
 
-        return (observation, numpy.array(rewards + action.tolist())), reward, done, info
+        return (observation, numpy.array(mo_objs + action.tolist())), reward, done, info
 
     def reset(self):
         """
@@ -183,13 +178,18 @@ class STEDEnv(gym.Env):
 
         # Acquire STED image
         sted_image, bleached, _ = self.microscope.get_signal_and_bleach(
-            self.datamap, self.datamap.pixelsize, **sted_params, bleach=True
+            self.datamap, self.datamap.pixelsize, **sted_params, bleach=False
         )
 
         # Acquire confocal image
         conf2, bleached, _ = self.microscope.get_signal_and_bleach(
             self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
         )
+
+        # automatically bleaches the datamap
+        normalized_p_sted = 1 - (sted_params["p_sted"] - defaults.action_spaces["p_sted"]["low"]) / (defaults.action_spaces["p_sted"]["high"] - defaults.action_spaces["p_sted"]["low"])
+        conf2 = conf2 * normalized_p_sted
+        self.datamap.whole_datamap = self.datamap.whole_datamap * normalized_p_sted
 
         # foreground on confocal image
         fg_c = get_foreground(conf1)
@@ -223,8 +223,8 @@ class STEDEnvWithoutVision(gym.Env):
 
         self.actions = actions
         self.action_space = spaces.Box(
-            low=numpy.array([action_spaces[name]["low"] for name in self.actions]),
-            high=numpy.array([action_spaces[name]["high"] for name in self.actions]),
+            low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions]),
+            high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions]),
             shape=(len(self.actions),), dtype=numpy.float32
         )
         self.observation_space = spaces.Box(0, 1, shape=(len(self.obj_names) + len(self.actions),), dtype=numpy.float32)
@@ -256,7 +256,7 @@ class STEDEnvWithoutVision(gym.Env):
         mo_objs = self.mo_reward_calculator.evaluate_rescale(sted_image, conf1, conf2, fg_s, fg_c)
 
         num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
-        # print(action / action_spaces["p_sted"]["high"], num_killed)
+        # print(action / defaults.action_spaces["p_sted"]["high"], num_killed)
         done = (self.current_step >= self.spec.max_episode_steps) \
                 or (num_killed > 0.90)
         # print(rewards, reward, done)
@@ -274,7 +274,7 @@ class STEDEnvWithoutVision(gym.Env):
 
         self.current_step += 1
 
-        # action  = (action - action_spaces["p_sted"]["low"]) / (action_spaces["p_sted"]["high"] - action_spaces["p_sted"]["low"])
+        # action  = (action - defaults.action_spaces["p_sted"]["low"]) / (defaults.action_spaces["p_sted"]["high"] - defaults.action_spaces["p_sted"]["low"])
 
         return numpy.array(mo_objs + action.tolist()), reward, done, info
 
@@ -363,7 +363,7 @@ class STEDEnvWithoutVision(gym.Env):
         )
 
         # automatically bleaches the datamap
-        normalized_p_sted = 1 - (sted_params["p_sted"] - action_spaces["p_sted"]["low"]) / (action_spaces["p_sted"]["high"] - action_spaces["p_sted"]["low"])
+        normalized_p_sted = 1 - (sted_params["p_sted"] - defaults.action_spaces["p_sted"]["low"]) / (defaults.action_spaces["p_sted"]["high"] - defaults.action_spaces["p_sted"]["low"])
         conf2 = conf2 * normalized_p_sted
         self.datamap.whole_datamap = self.datamap.whole_datamap * normalized_p_sted
 
