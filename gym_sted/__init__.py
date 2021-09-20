@@ -279,6 +279,39 @@ register(
     }
 )
 
+register(
+    id="ContextualMOSTEDRanking-easy-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectiveEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTEDRanking-mid-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectiveEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "choice",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTEDRanking-hard-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectiveEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
 # Ranking environment recurrent
 register(
     id="MOSTEDrankingWithArticulation-recurrent-easy-v0",
