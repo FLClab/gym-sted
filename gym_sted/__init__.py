@@ -279,9 +279,13 @@ register(
     }
 )
 
+############################################
+# CONTEXTUAL
+############################################
+
 register(
-    id="ContextualMOSTEDRanking-easy-v0",
-    entry_point="gym_sted.envs:ContextualSTEDMultiObjectiveEnv",
+    id="ContextualMOSTED-easy-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
@@ -291,8 +295,8 @@ register(
 )
 
 register(
-    id="ContextualMOSTEDRanking-mid-v0",
-    entry_point="gym_sted.envs:ContextualSTEDMultiObjectiveEnv",
+    id="ContextualMOSTED-mid-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
@@ -302,13 +306,43 @@ register(
 )
 
 register(
-    id="ContextualMOSTEDRanking-hard-v0",
-    entry_point="gym_sted.envs:ContextualSTEDMultiObjectiveEnv",
+    id="ContextualMOSTED-hard-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "normal",
         "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualRankingMOSTED-easy-v0",
+    entry_point="gym_sted.envs:ContextualRankingSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant",
+    }
+)
+
+register(
+    id="ContextualRankingMOSTED-mid-v0",
+    entry_point="gym_sted.envs:ContextualRankingSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "choice"
+    }
+)
+
+register(
+    id="ContextualRankingMOSTED-hard-v0",
+    entry_point="gym_sted.envs:ContextualRankingSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal"
     }
 )
 
