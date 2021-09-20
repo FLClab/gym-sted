@@ -41,7 +41,7 @@ scales_dict = {
 action_spaces = defaults.action_spaces
 
 
-class timedExpSTEDEnv(gym.Env):
+class timedExpSTEDEnvDebug(gym.Env):
     """
     Creates a 'STEDEnv'
 
@@ -325,7 +325,7 @@ class timedExpSTEDEnv(gym.Env):
 
         self.clock = pysted.base.Clock(self.time_quantum_us)
         self.temporal_experiment = pysted.base.TemporalExperiment(self.clock, self.microscope, self.temporal_datamap,
-                                                                  self.exp_time_us, bleach=True,
+                                                                  self.exp_time_us, bleach=False,
                                                                   bleach_mode="proportional")
 
         # foreground on confocal image
@@ -384,13 +384,9 @@ class timedExpSTEDEnv(gym.Env):
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
-    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="sampled", bleach_sampling="normal")
-
-
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="sampled")
     # env.seed(42)
     state = env.reset()
-    print(env.microscope.fluo.phy_react)
-    exit()
     # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
     #     indices = {"flashes": t}
     #     env.temporal_datamap.update_whole_datamap(t)
