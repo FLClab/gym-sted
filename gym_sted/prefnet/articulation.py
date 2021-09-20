@@ -26,7 +26,7 @@ class PreferenceArticulator:
         :param thetas: A `list` of rewards
 
         :returns : An `int` of the optimal choice
-                   An `numpy.nd`
+                   An `numpy.ndarray` of the scores from low to high
         """
         # Converts to numpy ndarray and resize
         thetas = numpy.array(thetas)
