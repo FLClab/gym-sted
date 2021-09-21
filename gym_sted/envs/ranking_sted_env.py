@@ -733,7 +733,7 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=10, scale_nanodomain_reward=1.):
 
-        super(ContextualRankingMultiObjectivesEnv, self).__init__(
+        super(ContextualRankingSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
             max_episode_steps = max_episode_steps,
@@ -789,6 +789,7 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
         return (self.state, obs), reward, done, info
+        
 class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
     """
     Creates a `rankSTEDMultiObjectivesEnv`
