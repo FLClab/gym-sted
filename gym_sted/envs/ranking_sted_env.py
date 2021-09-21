@@ -645,6 +645,94 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
         return (self.state, obs), reward, done, info
 
+class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `rankSTEDMultiObjectivesWithDelayedRewardEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.):
+
+        super(rankSTEDMultiObjectivesWithDelayedRewardEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward
+        )
+
+    def step(self, action):
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # On the last step of the environment we enforce the final decision
+        final_action = self.current_step >= self.spec.max_episode_steps - 1
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        if final_action:
+
+            # Reward is proportionnal to the ranked position of the last image
+            _, sorted_indices = self.preference_articulation.articulate(
+                self.episode_memory["mo_objs"] + [mo_objs]
+            )
+            index = numpy.argmax(sorted_indices).item()
+            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = reward * self.scale_nanodomain_reward
+
+            weights = numpy.linspace(0, 1, num=len(sorted_indices))
+            weights = 1 - weights[index] + weights
+            weights = weights[[numpy.argwhere(sorted_indices == idx).item() for idx in range(len(weights))]]
+            reward = reward * weights
+
+            done = True
+        else:
+            reward = 0
+            done = False
+
+        # Updates memory
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward
+        }
+
+        # Build the observation space
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(a)
+            obs.extend(mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        return (self.state, obs), reward, done, info
+
 class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
     Creates a `ContextualSTEDMultiObjectivesEnv`
@@ -789,7 +877,7 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
         return (self.state, obs), reward, done, info
-        
+
 class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
     """
     Creates a `rankSTEDMultiObjectivesEnv`
@@ -1385,8 +1473,8 @@ if __name__ == "__main__":
 
     from gym.envs.registration import EnvSpec
 
-    env = rankSTEDRecurrentMultiObjectivesEnv(actions=["p_sted", "p_ex", "pdt"], bleach_sampling="normal", scale_rank_reward=True, select_final=False)
-    env.spec = EnvSpec("STEDranking-v0", max_episode_steps=10)
+    env = rankSTEDMultiObjectivesWithDelayedRewardEnv(actions=["p_sted"], bleach_sampling="normal")
+    env.spec = EnvSpec("STEDranking-v0", max_episode_steps=3)
     for i in range(10):
         obs = env.reset()
 
@@ -1394,7 +1482,7 @@ if __name__ == "__main__":
             obs, reward, done, info = env.step(env.action_space.sample())
             # print(obs[1])
             # obs, reward, done, info = env.step(numpy.array(i))
-            print(reward, info["mo_objs"], int(info["action"][-1]))
+            print(reward, info["mo_objs"], info["action"][-1])
 
             if done:
                 print(f"Episode {i} done.\n")

@@ -257,6 +257,39 @@ register(
 )
 
 register(
+    id="MOSTEDRankingWithDelayedReward-easy-v0",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesWithDelayedRewardEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="MOSTEDRankingWithDelayedReward-mid-v0",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesWithDelayedRewardEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "choice",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="MOSTEDRankingWithDelayedReward-hard-v0",
+    entry_point="gym_sted.envs:rankSTEDMultiObjectivesWithDelayedRewardEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
     id="MOSTEDRanking-easy-v1",
     entry_point="gym_sted.envs:rankSTEDMultiObjectivesEnv",
     max_episode_steps=10,
