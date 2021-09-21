@@ -445,6 +445,17 @@ register(
     entry_point="gym_sted.envs:rankSTEDRecurrentMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
+        "actions" : ["p_sted"],
+        "bleach_sampling" : "constant",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="MOSTEDRanking-recurrent-easy-v1",
+    entry_point="gym_sted.envs:rankSTEDRecurrentMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "constant",
         "scale_nanodomain_reward" : 1.,
