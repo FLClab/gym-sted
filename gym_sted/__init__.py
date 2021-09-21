@@ -40,6 +40,16 @@ register(
 )
 
 register(
+    id='STEDMultiplyWithDelayedReward-v0',
+    entry_point='gym_sted.envs:STEDEnvWithDelayedReward',
+    max_episode_steps=10,
+    kwargs={
+        "reward_calculator" : "MultiplyRewardCalculator",
+        "actions" : ["p_sted"]
+    }
+)
+
+register(
     id='STEDbounded-v0',
     entry_point='gym_sted.envs:STEDEnv',
     max_episode_steps=10,
