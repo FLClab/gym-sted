@@ -83,7 +83,7 @@ class STEDEnv(gym.Env):
 
         num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
         # print(action / defaults.action_spaces["p_sted"]["high"], num_killed)
-        done = (self.current_step >= self.spec.max_episode_steps) \
+        done = (self.current_step >= self.spec.max_episode_steps - 1) \
                 or (num_killed > 0.90)
         # print(rewards, reward, done)
         observation = conf2[..., numpy.newaxis]
@@ -256,7 +256,7 @@ class STEDEnvWithoutVision(gym.Env):
 
         num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
         # print(action / defaults.action_spaces["p_sted"]["high"], num_killed)
-        done = (self.current_step >= self.spec.max_episode_steps) \
+        done = (self.current_step >= self.spec.max_episode_steps - 1) \
                 or (num_killed > 0.90)
         # print(rewards, reward, done)
         observation = conf2[..., numpy.newaxis]
@@ -408,7 +408,7 @@ class STEDEnvWithDelayedReward(STEDEnv):
 
         num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
         # print(action / defaults.action_spaces["p_sted"]["high"], num_killed)
-        done = (self.current_step >= self.spec.max_episode_steps) \
+        done = (self.current_step >= self.spec.max_episode_steps - 1) \
                 or (num_killed > 0.90)
         # print(rewards, reward, done)
         observation = conf2[..., numpy.newaxis]
@@ -425,10 +425,7 @@ class STEDEnvWithDelayedReward(STEDEnv):
         self.current_step += 1
 
         self.episode_memory.append(reward)
-        if done:
-            reward = numpy.array(self.episode_memory)
-        else:
-            reward = 0
+        reward = numpy.array(self.episode_memory)
 
         return (observation, numpy.array(mo_objs + action.tolist())), reward, done, info
 

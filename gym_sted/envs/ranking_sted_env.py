@@ -509,8 +509,9 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         # Acquire an image with the given parameters
         sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
         if final_action:
-            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = f1_score
             reward = reward * self.scale_nanodomain_reward
 
             done = True
@@ -543,7 +544,9 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             "fg_c" : fg_c,
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
-            "reward" : reward
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
         }
 
         # Build the observation space
@@ -603,8 +606,9 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
         # Acquire an image with the given parameters
         sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
         if final_action:
-            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = f1_score
             reward = reward * self.scale_nanodomain_reward
 
             done = True
@@ -637,7 +641,9 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
             "fg_c" : fg_c,
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
-            "reward" : reward
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
         }
 
         # Build the observation space
@@ -683,6 +689,7 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
         # Acquire an image with the given parameters
         sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
         if final_action:
 
             # Reward is proportionnal to the ranked position of the last image
@@ -721,7 +728,9 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
             "fg_c" : fg_c,
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
-            "reward" : reward
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
         }
 
         # Build the observation space
@@ -769,8 +778,8 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         # Acquire an image with the given parameters
         sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-        reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
-        reward = reward * self.scale_nanodomain_reward
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+        reward = f1_score * self.scale_nanodomain_reward
 
         # Updates memory
         done = self.current_step >= self.spec.max_episode_steps - 1
@@ -791,7 +800,9 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             "fg_c" : fg_c,
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
-            "reward" : reward
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
         }
 
         # Build the observation space
@@ -838,6 +849,7 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         # Acquire an image with the given parameters
         sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
 
         # Reward is proportionnal to the ranked position of the last image
         articulation, sorted_indices = self.preference_articulation.articulate(
@@ -866,7 +878,9 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             "fg_c" : fg_c,
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
-            "reward" : reward
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
         }
 
         # Build the observation space
