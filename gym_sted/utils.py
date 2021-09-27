@@ -378,4 +378,6 @@ class Normalizer:
         """
         Implements the normalize method of the class
         """
-        return numpy.array([(value - self.scales[name]["low"]) / (self.scales[name]["high"] - self.scales[name]["low"]) for name in self.names])
+        if isinstance(x, (list, tuple)):
+            x = numpy.array(x)
+        return numpy.array([(_x - self.scales[name]["low"]) / (self.scales[name]["high"] - self.scales[name]["low"]) for name, _x in zip(self.names, x)])
