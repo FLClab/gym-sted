@@ -32,7 +32,7 @@ class RewardCalculator:
         :param value: The value of the objective
         :param obj_name: The name of the objective
         """
-        return (value - self.scales[obj_name]["min"]) / (self.scales[obj_name]["max"] - self.scales[obj_name]["min"])
+        return (value - self.scales[obj_name]["low"]) / (self.scales[obj_name]["high"] - self.scales[obj_name]["low"])
 
 class MORewardCalculator(RewardCalculator):
     def __init__(self, objs, *args, **kwargs):
@@ -145,7 +145,7 @@ class MultiplyRewardCalculator(RewardCalculator):
         :param value: The value of the objective
         :param obj_name: The name of the objective
         """
-        return (value - self.scales[obj_name]["min"]) / (self.scales[obj_name]["max"] - self.scales[obj_name]["min"])
+        return (value - self.scales[obj_name]["low"]) / (self.scales[obj_name]["high"] - self.scales[obj_name]["low"])
 
 class BoundedRewardCalculator(RewardCalculator):
     def __init__(self, objs, *args, **kwargs):
@@ -185,7 +185,7 @@ class BoundedRewardCalculator(RewardCalculator):
 
         :returns : A `bool` whether the value is within the bounds
         """
-        return self.bounds[obj_name]["min"] < value < self.bounds[obj_name]["max"]
+        return self.bounds[obj_name]["low"] < value < self.bounds[obj_name]["high"]
 
 class NanodomainsRewardCalculator(RewardCalculator):
     def __init__(self, objs, *args, **kwargs):
@@ -230,4 +230,4 @@ class NanodomainsRewardCalculator(RewardCalculator):
         :param value: The value of the objective
         :param obj_name: The name of the objective
         """
-        return (value - self.scales[obj_name]["min"]) / (self.scales[obj_name]["max"] - self.scales[obj_name]["min"])
+        return (value - self.scales[obj_name]["low"]) / (self.scales[obj_name]["high"] - self.scales[obj_name]["low"])

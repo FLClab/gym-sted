@@ -11,7 +11,7 @@ from collections import OrderedDict
 
 import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler, Normalizer
 from gym_sted.rewards import objectives
 from gym_sted.prefnet import PreferenceArticulator
 
@@ -23,16 +23,16 @@ obj_dict = {
     "NbNanodomains" : objectives.NumberNanodomains()
 }
 bounds_dict = {
-    "SNR" : {"min" : 0.20, "max" : numpy.inf},
-    "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 100},
-    "NbNanodomains" : {"min" : 0, "max" : numpy.inf}
+    "SNR" : {"low" : 0.20, "high" : numpy.inf},
+    "Bleach" : {"low" : -numpy.inf, "high" : 0.5},
+    "Resolution" : {"low" : 0, "high" : 100},
+    "NbNanodomains" : {"low" : 0, "high" : numpy.inf}
 }
 scales_dict = {
-    "SNR" : {"min" : 0, "max" : 1},
-    "Bleach" : {"min" : 0, "max" : 1},
-    "Resolution" : {"min" : 40, "max" : 180},
-    "NbNanodomains" : {"min" : 0, "max" : 1}
+    "SNR" : {"low" : 0, "high" : 1},
+    "Bleach" : {"low" : 0, "high" : 1},
+    "Resolution" : {"low" : 40, "high" : 180},
+    "NbNanodomains" : {"low" : 0, "high" : 1}
 }
 
 class rankSTEDSingleObjectiveEnv(gym.Env):
@@ -131,7 +131,7 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
 
             done = False
             reward = 1
-            rewards = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
+            rewards = [scales_dict[obj_name]["high"] if obj_name != "SNR" else scales_dict[obj_name]["low"] for obj_name in self.obj_names]
             self.num_request_left -= 1
 
             if len(self.cummulated_rewards["rewards"]) > 0:
@@ -353,6 +353,10 @@ class STEDMultiObjectivesEnv(gym.Env):
 
         # Loads preference articulation model
         self.preference_articulation = PreferenceArticulator()
+
+        # Creates an action and objective normalizer
+        self.action_normalizer = Normalizer(self.actions, defaults.action_spaces)
+        self.obj_normalizer = Normalizer(self.obj_names, scales_dict)
 
     def step(self, action):
         """
@@ -814,6 +818,86 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
         return (self.state, obs), reward, done, info
 
+class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `ContextualRecurrentSTEDMultiObjectivesEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.):
+
+        super(ContextualRecurrentSTEDMultiObjectivesEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward
+        )
+
+        # We redefine the observation space in case of recurrent model
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(
+                0, 1, shape=(len(self.obj_names) + len(self.actions),),
+                dtype=numpy.float32
+            ) # Articulation, shape is given by objectives, actions at each steps
+        ))
+
+    def step(self, action):
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+        reward = f1_score * self.scale_nanodomain_reward
+
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
+        }
+
+        # Build the observation space
+        obs = numpy.concatenate((
+            self.action_normalizer(self.episode_memory["actions"][-1]),
+            self.obj_normalizer(self.episode_memory["mo_objs"][-1])
+        ), axis=0)
+
+        return (self.state, obs), reward, done, info
+
 class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
     Creates a `ContextualRankingMultiObjectivesEnv`
@@ -1018,7 +1102,7 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
             fg_c = numpy.zeros(self.observation_space[0].shape[:-1])
 
             reward = 1
-            mo_objs = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
+            mo_objs = [scales_dict[obj_name]["high"] if obj_name != "SNR" else scales_dict[obj_name]["low"] for obj_name in self.obj_names]
             self.num_request_left -= 1
 
             if len(self.episode_memory["mo_objs"]) > 0:
@@ -1314,7 +1398,7 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
             fg_c = numpy.zeros(self.observation_space[0].shape[:-1])
 
             reward = 1
-            mo_objs = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
+            mo_objs = [scales_dict[obj_name]["high"] if obj_name != "SNR" else scales_dict[obj_name]["low"] for obj_name in self.obj_names]
             self.num_request_left -= 1
 
             if len(self.episode_memory["mo_objs"]) > 0:

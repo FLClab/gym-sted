@@ -360,6 +360,17 @@ register(
 )
 
 register(
+    id="ContextualRecurrentMOSTED-easy-v0",
+    entry_point="gym_sted.envs:ContextualRankingSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted"],
+        "bleach_sampling" : "constant",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
     id="ContextualRankingMOSTED-easy-v0",
     entry_point="gym_sted.envs:ContextualRankingSTEDMultiObjectivesEnv",
     max_episode_steps=10,
