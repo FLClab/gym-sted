@@ -1,2 +1,2 @@
 
-from leaderboard import LeaderBoard
+from .leaderboard import LeaderBoard, plot_top
