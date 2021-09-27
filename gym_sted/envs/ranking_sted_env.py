@@ -302,7 +302,8 @@ class STEDMultiObjectivesEnv(gym.Env):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
         self.actions = actions
         self.action_space = spaces.Box(
@@ -355,6 +356,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         self.preference_articulation = PreferenceArticulator()
 
         # Creates an action and objective normalizer
+        self.normalize_observations = normalize_observations
         self.action_normalizer = Normalizer(self.actions, defaults.action_spaces)
         self.obj_normalizer = Normalizer(self.obj_names, scales_dict)
 
@@ -492,13 +494,15 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
         super(rankSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
             max_episode_steps = max_episode_steps,
-            scale_nanodomain_reward = scale_nanodomain_reward
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations = normalize_observations
         )
 
     def step(self, action):
@@ -556,8 +560,8 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         # Build the observation space
         obs = []
         for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
-            obs.extend(a)
-            obs.extend(mo)
+            obs.extend(self.action_normalizer(numpy.array(a)) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(numpy.array(mo)) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
         return (self.state, obs), reward, done, info
