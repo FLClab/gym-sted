@@ -705,11 +705,9 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
                 self.episode_memory["mo_objs"] + [mo_objs]
             )
             index = numpy.argmax(sorted_indices).item()
-            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
-            reward = reward * self.scale_nanodomain_reward
+            reward = f1_score * self.scale_nanodomain_reward
 
             weights = numpy.linspace(0, 1, num=len(sorted_indices))
-            weights = 1 - weights[index] + weights
             weights = weights[[numpy.argwhere(sorted_indices == idx).item() for idx in range(len(weights))]]
             reward = reward * weights
 
