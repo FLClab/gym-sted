@@ -83,7 +83,7 @@ class STEDEnv(gym.Env):
 
         num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
         # print(action / defaults.action_spaces["p_sted"]["high"], num_killed)
-        done = (self.current_step >= self.spec.max_episode_steps) \
+        done = (self.current_step >= self.spec.max_episode_steps - 1) \
                 or (num_killed > 0.90)
         # print(rewards, reward, done)
         observation = conf2[..., numpy.newaxis]
@@ -97,7 +97,6 @@ class STEDEnv(gym.Env):
             "fg_s" : fg_s,
             "mo_objs" : mo_objs
         }
-
         self.current_step += 1
 
         return (observation, numpy.array(mo_objs + action.tolist())), reward, done, info
@@ -257,7 +256,7 @@ class STEDEnvWithoutVision(gym.Env):
 
         num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
         # print(action / defaults.action_spaces["p_sted"]["high"], num_killed)
-        done = (self.current_step >= self.spec.max_episode_steps) \
+        done = (self.current_step >= self.spec.max_episode_steps - 1) \
                 or (num_killed > 0.90)
         # print(rewards, reward, done)
         observation = conf2[..., numpy.newaxis]
@@ -381,6 +380,68 @@ class STEDEnvWithoutVision(gym.Env):
 
     def close(self):
         return None
+
+class STEDEnvWithDelayedReward(STEDEnv):
+    """
+    Creates a `STEDEnvWithDelayedReward`
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"]):
+        super(STEDEnvWithDelayedReward, self).__init__(
+            reward_calculator=reward_calculator,
+            actions = actions
+        )
+
+        self.episode_memory = []
+
+    def step(self, action):
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire the image
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+
+        reward = self.reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+
+        num_killed = (self.initial_count - self.datamap.whole_datamap.sum()) / self.initial_count
+        # print(action / defaults.action_spaces["p_sted"]["high"], num_killed)
+        done = (self.current_step >= self.spec.max_episode_steps - 1) \
+                or (num_killed > 0.90)
+        # print(rewards, reward, done)
+        observation = conf2[..., numpy.newaxis]
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs
+        }
+        self.current_step += 1
+
+        self.episode_memory.append(reward)
+        reward = numpy.array(self.episode_memory)
+
+        return (observation, numpy.array(mo_objs + action.tolist())), reward, done, info
+
+    def reset(self):
+        """
+        Resets the environment with a new datamap
+
+        :returns : A `numpy.ndarray` of the molecules
+        """
+        self.current_step = 0
+        self.episode_memory = []
+        state = self._update_datamap()
+        self.initial_count = self.datamap.whole_datamap.sum()
+
+        self.state = state[..., numpy.newaxis]
+        return (self.state, numpy.zeros((len(self.obj_names) + len(self.actions), )))
 
 if __name__ == "__main__":
 

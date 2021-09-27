@@ -353,3 +353,29 @@ class RecordingQueue:
     def __str__(self):
         return "tail: " + str(self.queue_tail) + "\narray:\n" + str(self.rec_queue)
         return str(self.to_array())
+
+class Normalizer:
+    """
+    Implements a `Normalizer`
+    """
+    def __init__(self, names, scales):
+        """
+        Instantiates the `Normalizer`
+
+        :param names: A `list` of `str`
+        :param scales: A `dict` of scales where each keys contain {'low', 'high'}
+        """
+        self.names = names
+        self.scales = scales
+
+    def __call__(self, x):
+        """
+        Implements the `__call__` method of the `Normalizer`
+        """
+        return self.normalize(x)
+
+    def normalize(self, x):
+        """
+        Implements the normalize method of the class
+        """
+        return numpy.array([(value - self.scales[name]["low"]) / (self.scales[name]["high"] - self.scales[name]["low"]) for name in self.names])
