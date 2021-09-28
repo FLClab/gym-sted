@@ -247,8 +247,8 @@ class BleachSampler:
 
     :param mode: The sampling mode from {constant, uniform, choice}
     """
-    def __init__(self, mode, value=None):
-
+    def __init__(self, mode, value=None, seed=None):
+        self.seed(seed)
         self.mode = mode
         self.value = value
         self.uniform_limits = [
@@ -269,6 +269,13 @@ class BleachSampler:
             (50.0e-11 - 25.0e-11, 50.0e-11, 50.0e-11 + 25.0e-11) # p_sted
         ]
         self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
+
+    def seed(self, seed=None):
+        """
+        Seeds the sampler
+        """
+        numpy.random.seed(seed)
+        random.seed(seed)
 
     def sample(self):
         """

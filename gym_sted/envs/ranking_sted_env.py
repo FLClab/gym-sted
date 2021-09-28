@@ -13,7 +13,7 @@ import gym_sted
 from gym_sted import rewards, defaults
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler, Normalizer
 from gym_sted.rewards import objectives
-from gym_sted.prefnet import PreferenceArticulator
+from gym_sted.prefnet import PreferenceArticulator, load_demonstrations
 
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
@@ -335,7 +335,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         self.datamap = None
         self.viewer = None
 
-        self.seed()
+        # seed = self.seed(0)
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
         self.microscope_generator = MicroscopeGenerator()
@@ -413,6 +413,7 @@ class STEDMultiObjectivesEnv(gym.Env):
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
+        self.bleach_sampler.seed(seed)
         return [seed]
 
     def update_(self, **kwargs):
@@ -583,13 +584,15 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
         super(rankSTEDRecurrentMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
             max_episode_steps = max_episode_steps,
-            scale_nanodomain_reward = scale_nanodomain_reward
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
         )
 
         # We redefine the observation space in case of recurrent model
@@ -676,13 +679,15 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
         super(rankSTEDMultiObjectivesWithDelayedRewardEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
             max_episode_steps = max_episode_steps,
-            scale_nanodomain_reward = scale_nanodomain_reward
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
         )
 
     def step(self, action):
@@ -742,8 +747,8 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
         # Build the observation space
         obs = []
         for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
-            obs.extend(a)
-            obs.extend(mo)
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
         return (self.state, obs), reward, done, info
@@ -765,13 +770,15 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
         super(ContextualSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
             max_episode_steps = max_episode_steps,
-            scale_nanodomain_reward = scale_nanodomain_reward
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
         )
 
     def step(self, action):
@@ -814,8 +821,8 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         # Build the observation space
         obs = []
         for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
-            obs.extend(a)
-            obs.extend(mo)
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
         return (self.state, obs), reward, done, info
@@ -837,13 +844,15 @@ class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
         super(ContextualRecurrentSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
             max_episode_steps = max_episode_steps,
-            scale_nanodomain_reward = scale_nanodomain_reward
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
         )
 
         # We redefine the observation space in case of recurrent model
@@ -916,13 +925,15 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
         super(ContextualRankingSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
             max_episode_steps = max_episode_steps,
-            scale_nanodomain_reward = scale_nanodomain_reward
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
         )
 
     def step(self, action):
@@ -972,8 +983,91 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         # Build the observation space
         obs = []
         for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
-            obs.extend(a)
-            obs.extend(mo)
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        return (self.state, obs), reward, done, info
+
+class ExpertDemonstrationSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `ExpertDemonstrationSTEDMultiObjectivesEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
+
+        super(ExpertDemonstrationSTEDMultiObjectivesEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
+        )
+
+        # Load expert demonstration
+        self.demonstrations = load_demonstrations()
+
+    def step(self, action):
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+
+        # Reward is proportionnal to the ranked position of the last image
+        articulation, sorted_indices = self.preference_articulation.articulate(
+            self.demonstrations + [mo_objs]
+        )
+        index = numpy.argmax(sorted_indices).item()
+        # Reward is given by the position in the sorting
+        reward = (index + 1) / len(sorted_indices)
+
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
+        }
+
+        # Build the observation space
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
         return (self.state, obs), reward, done, info
@@ -1573,7 +1667,7 @@ if __name__ == "__main__":
 
     from gym.envs.registration import EnvSpec
 
-    env = rankSTEDMultiObjectivesWithDelayedRewardEnv(actions=["p_sted"], bleach_sampling="normal")
+    env = ExpertDemonstrationSTEDMultiObjectivesEnv(actions=["p_sted"], bleach_sampling="normal")
     env.spec = EnvSpec("STEDranking-v0", max_episode_steps=3)
     for i in range(10):
         obs = env.reset()

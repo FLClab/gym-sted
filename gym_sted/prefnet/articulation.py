@@ -2,10 +2,29 @@
 import numpy
 import os
 import json
+import pickle
+import bz2
 
 import gym_sted
 
 from .prefNet import PrefNet
+
+def load_demonstrations(path=None):
+    """
+    Loads a set of demonstrations from the given path
+
+    :param path: A `str` of the path to the set of demonstrations
+
+    :returns : A `list` of demonstrations
+    """
+    if isinstance(path, type(None)):
+        path = os.path.join(os.path.dirname(gym_sted.__file__), "prefnet", "demonstrations", "demonstrations.pbz2")
+    with bz2.open(path, "rb") as file:
+        demonstrations = pickle.load(file)
+    mo_objs = []
+    for demonstration in demonstrations:
+        mo_objs.extend([info["mo_objs"] for info in demonstration])
+    return mo_objs
 
 class PreferenceArticulator:
     """

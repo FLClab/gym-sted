@@ -9,7 +9,8 @@ from gym_sted.envs.ranking_sted_env import (
     ContextualSTEDMultiObjectivesEnv,
     ContextualRankingSTEDMultiObjectivesEnv,
     ContextualRankingSTEDMultiObjectivesEnv,
-    rankSTEDMultiObjectivesWithDelayedRewardEnv
+    rankSTEDMultiObjectivesWithDelayedRewardEnv,
+    ExpertDemonstrationSTEDMultiObjectivesEnv
 )
 from gym_sted.envs.timed_sted_env import timedExpSTEDEnv
 from gym_sted.envs.timed_sted_env_debug import timedExpSTEDEnvDebug
