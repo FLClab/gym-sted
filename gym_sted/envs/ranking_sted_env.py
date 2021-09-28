@@ -658,8 +658,11 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
         }
 
         # Build the observation space
-        obs = numpy.concatenate((self.episode_memory["actions"][-1], self.episode_memory["mo_objs"][-1]), axis=0)
-
+        obs = numpy.concatenate((
+            self.action_normalizer(self.episode_memory["actions"][-1]),
+            self.obj_normalizer(self.episode_memory["mo_objs"][-1])
+        ), axis=0)
+        
         return (self.state, obs), reward, done, info
 
 class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
