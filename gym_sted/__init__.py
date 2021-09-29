@@ -231,6 +231,7 @@ register(
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "constant",
         "scale_nanodomain_reward" : 1.,
+        "normalize_observations" : True
     }
 )
 
@@ -242,6 +243,7 @@ register(
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "choice",
         "scale_nanodomain_reward" : 1.,
+        "normalize_observations" : True
     }
 )
 
@@ -253,6 +255,7 @@ register(
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "normal",
         "scale_nanodomain_reward" : 1.,
+        "normalize_observations" : True
     }
 )
 
