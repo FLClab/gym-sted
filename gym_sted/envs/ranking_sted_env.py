@@ -52,7 +52,9 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
     def __init__(self, reward_calculator="SumRewardCalculator", actions=["p_sted"],
                     max_num_requests=1, max_episode_steps=10, select_final=True):
 
-        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
+        self.synapse_generator = SynapseGenerator(
+            mode="mushroom", seed=None, n_nanodomains=(3, 15), n_molecs_in_domain=(molecules * 20, molecules * 35)
+        )
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
 
@@ -313,7 +315,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         )
 
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(64, 64, 2), dtype=numpy.uint16),
             spaces.Box(
                 0, 1, shape=(len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
                 dtype=numpy.float32
@@ -390,7 +392,7 @@ class STEDMultiObjectivesEnv(gym.Env):
 
         state = self._update_datamap()
 
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((numpy.zeros_like(state), state), axis=-1)
         return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
 
     def render(self, info, mode='human'):
@@ -544,7 +546,7 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -599,7 +601,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
         # We redefine the observation space in case of recurrent model
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(64, 64, 2), dtype=numpy.uint16),
             spaces.Box(
                 0, 1, shape=(len(self.obj_names) + len(self.actions),),
                 dtype=numpy.float32
@@ -643,7 +645,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -733,7 +735,7 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -807,7 +809,7 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -862,7 +864,7 @@ class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
         # We redefine the observation space in case of recurrent model
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(64, 64, 2), dtype=numpy.uint16),
             spaces.Box(
                 0, 1, shape=(len(self.obj_names) + len(self.actions),),
                 dtype=numpy.float32
@@ -890,7 +892,7 @@ class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -969,7 +971,7 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -1052,7 +1054,7 @@ class ExpertDemonstrationSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -1118,7 +1120,7 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
             )
 
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(64, 64, 2), dtype=numpy.uint16),
             spaces.Box(
                 0, 1, shape=(max_episode_steps + len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
                 dtype=numpy.float32
@@ -1145,7 +1147,9 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
 
         self.seed()
 
-        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
+        self.synapse_generator = SynapseGenerator(
+            mode="mushroom", seed=None, n_nanodomains=(3, 15), n_molecs_in_domain=(molecules * 20, molecules * 35)
+        )
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
         self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
@@ -1231,7 +1235,7 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -1282,7 +1286,7 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
 
         state = self._update_datamap()
 
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((numpy.zeros_like(state), state), axis=-1)
         return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
 
     def render(self, info, mode='human'):
@@ -1412,7 +1416,7 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
             )
 
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(64, 64, 2), dtype=numpy.uint16),
             spaces.Box(
                 0, 1, shape=(max_episode_steps + len(self.obj_names) + len(self.actions),),
                 dtype=numpy.float32
@@ -1439,7 +1443,9 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
 
         self.seed()
 
-        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
+        self.synapse_generator = SynapseGenerator(
+            mode="mushroom", seed=None, n_nanodomains=(3, 15), n_molecs_in_domain=(molecules * 20, molecules * 35)
+        )
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
         self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
@@ -1527,7 +1533,7 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((sted_image, state), axis=-1)
 
         info = {
             "action" : action,
@@ -1577,7 +1583,7 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
 
         state = self._update_datamap()
 
-        self.state = state[..., numpy.newaxis]
+        self.state = numpy.stack((numpy.zeros_like(state), state), axis=-1)
         return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
 
     def render(self, info, mode='human'):
