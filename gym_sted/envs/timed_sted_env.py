@@ -128,8 +128,6 @@ class timedExpSTEDEnv(gym.Env):
         hmmmm
         dont d'abord je devrais regarder comment envoyer le signal des 3 objs au neural net and shit
         """
-        # Define a sted power under which we are in 'monitoring' mode, over which we are in 'detection' mode
-        p_sted_threshold = 5e-4
 
         action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
@@ -228,14 +226,9 @@ class timedExpSTEDEnv(gym.Env):
             rewards = self._reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
                                                        self.temporal_datamap)
 
-            # compute rewards differently for monitoring or detection mode
-            if sted_params["p_sted"] < p_sted_threshold:  # monitoring
-                reward = 0
-                rewards["NbNanodomains"] = 0
-            else:  # detection
-                # this is the scalarized reward
-                reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
-                                                         self.temporal_datamap)
+            # this is the scalarized reward
+            reward = self.reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
+                                                     self.temporal_datamap)
 
             n_molecules_total = numpy.sum(self.temporal_datamap.whole_datamap)
             done = self.temporal_experiment.clock.current_time >= self.exp_time_us or n_molecules_total == 0
