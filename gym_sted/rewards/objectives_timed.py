@@ -390,14 +390,11 @@ class NumberNanodomains(Objective):
         --> Quand même important à garder en tête, pourrais peut-être causer des comportements indésirés, mais pour 
             l'instant je vais garder cette implem
         """
-        # should I keep this condition? I feel like this is the kind of thing we talked about on monday :/
-        # if temporal_datamap.nanodomains_active_currently:
-        #     detector = metrics.CentroidDetectionError(gt_coords, guess_coords, threshold, algorithm="hungarian")
-        #     f1_score = detector.f1_score
-        # else:
-        #     f1_score = 0
-
-        detector = metrics.CentroidDetectionError(gt_coords, guess_coords, threshold, algorithm="hungarian")
-        f1_score = detector.f1_score
+        # if the nanodomains are not active, there is no ground truth position, so reward is 0
+        if temporal_datamap.nanodomains_active_currently:
+            detector = metrics.CentroidDetectionError(gt_coords, guess_coords, threshold, algorithm="hungarian")
+            f1_score = detector.f1_score
+        else:
+            f1_score = 0
 
         return f1_score
