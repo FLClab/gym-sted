@@ -11,9 +11,9 @@ from collections import OrderedDict
 
 import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler, Normalizer
 from gym_sted.rewards import objectives
-from gym_sted.prefnet import PreferenceArticulator
+from gym_sted.prefnet import PreferenceArticulator, load_demonstrations
 
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
@@ -23,16 +23,16 @@ obj_dict = {
     "NbNanodomains" : objectives.NumberNanodomains()
 }
 bounds_dict = {
-    "SNR" : {"min" : 0.20, "max" : numpy.inf},
-    "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 100},
-    "NbNanodomains" : {"min" : 0, "max" : numpy.inf}
+    "SNR" : {"low" : 0.20, "high" : numpy.inf},
+    "Bleach" : {"low" : -numpy.inf, "high" : 0.5},
+    "Resolution" : {"low" : 0, "high" : 100},
+    "NbNanodomains" : {"low" : 0, "high" : numpy.inf}
 }
 scales_dict = {
-    "SNR" : {"min" : 0, "max" : 1},
-    "Bleach" : {"min" : 0, "max" : 1},
-    "Resolution" : {"min" : 40, "max" : 180},
-    "NbNanodomains" : {"min" : 0, "max" : 1}
+    "SNR" : {"low" : 0, "high" : 1},
+    "Bleach" : {"low" : 0, "high" : 1},
+    "Resolution" : {"low" : 40, "high" : 180},
+    "NbNanodomains" : {"low" : 0, "high" : 1}
 }
 
 class rankSTEDSingleObjectiveEnv(gym.Env):
@@ -131,7 +131,7 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
 
             done = False
             reward = 1
-            rewards = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
+            rewards = [scales_dict[obj_name]["high"] if obj_name != "SNR" else scales_dict[obj_name]["low"] for obj_name in self.obj_names]
             self.num_request_left -= 1
 
             if len(self.cummulated_rewards["rewards"]) > 0:
@@ -285,9 +285,9 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
     def close(self):
         return None
 
-class rankSTEDMultiObjectivesEnv(gym.Env):
+class STEDMultiObjectivesEnv(gym.Env):
     """
-    Creates a `rankSTEDMultiObjectiveEnv`
+    Creates a `STEDMultiObjectivesEnv`
 
     Action space
         The action space corresponds to the imaging parameters
@@ -302,7 +302,8 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
         self.actions = actions
         self.action_space = spaces.Box(
@@ -334,7 +335,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
         self.datamap = None
         self.viewer = None
 
-        self.seed()
+        # seed = self.seed(0)
 
         self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
         self.microscope_generator = MicroscopeGenerator()
@@ -354,64 +355,18 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
         # Loads preference articulation model
         self.preference_articulation = PreferenceArticulator()
 
+        # Creates an action and objective normalizer
+        self.normalize_observations = normalize_observations
+        self.action_normalizer = Normalizer(self.actions, defaults.action_spaces)
+        self.obj_normalizer = Normalizer(self.obj_names, scales_dict)
+
     def step(self, action):
+        """
+        Method that should be implemented in the object that inherited
 
-        # Action is an array of size self.actions and main_action
-        # main action should be in the [0, 1, 2]
-        # We manually clip the actions which are out of action space
-        action = numpy.clip(action, self.action_space.low, self.action_space.high)
-
-        # On the last step of the environment we enforce the final decision
-        final_action = self.current_step >= self.spec.max_episode_steps - 1
-
-        # Acquire an image with the given parameters
-        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
-        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
-        if final_action:
-            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
-            reward = reward * self.scale_nanodomain_reward
-
-            done = True
-        else:
-            # Reward is proportionnal to the ranked position of the last image
-            articulation, sorted_indices = self.preference_articulation.articulate(
-                self.episode_memory["mo_objs"] + [mo_objs]
-            )
-            index = numpy.argmax(sorted_indices).item()
-            # Reward is given by the position in the sorting
-            reward = (index + 1) / len(sorted_indices)
-
-            done = False
-
-        # Updates memory
-        self.current_step += 1
-        self.episode_memory["mo_objs"].append(mo_objs)
-        self.episode_memory["actions"].append(action)
-        self.episode_memory["reward"].append(reward)
-
-        state = self._update_datamap()
-        self.state = state[..., numpy.newaxis]
-
-        info = {
-            "action" : action,
-            "bleached" : bleached,
-            "sted_image" : sted_image,
-            "conf1" : conf1,
-            "conf2" : conf2,
-            "fg_c" : fg_c,
-            "fg_s" : fg_s,
-            "mo_objs" : mo_objs,
-            "reward" : reward
-        }
-
-        # Build the observation space
-        obs = []
-        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
-            obs.extend(a)
-            obs.extend(mo)
-        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
-
-        return (self.state, obs), reward, done, info
+        :param action: A `numpy.ndarray` of the action
+        """
+        raise NotImplementedError
 
     def reset(self):
         """
@@ -458,6 +413,7 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
+        self.bleach_sampler.seed(seed)
         return [seed]
 
     def update_(self, **kwargs):
@@ -522,9 +478,9 @@ class rankSTEDMultiObjectivesEnv(gym.Env):
     def close(self):
         return None
 
-class rankSTEDRecurrentMultiObjectivesEnv(rankSTEDMultiObjectivesEnv):
+class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
-    Creates a `rankSTEDMultiObjectiveEnv`
+    Creates a `rankSTEDMultiObjectivesEnv`
 
     Action space
         The action space corresponds to the imaging parameters
@@ -539,26 +495,18 @@ class rankSTEDRecurrentMultiObjectivesEnv(rankSTEDMultiObjectivesEnv):
     obj_names = ["Resolution", "Bleach", "SNR"]
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.):
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
 
-        super(rankSTEDRecurrentMultiObjectivesEnv, self).__init__(
+        super(rankSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
             max_episode_steps = max_episode_steps,
-            scale_nanodomain_reward = scale_nanodomain_reward
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations = normalize_observations
         )
 
-        # We redefine the observation space in case of recurrent model
-        self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
-            spaces.Box(
-                0, 1, shape=(len(self.obj_names) + len(self.actions),),
-                dtype=numpy.float32
-            ) # Articulation, shape is given by objectives, actions at each steps
-        ))
-
     def step(self, action):
-
         # Action is an array of size self.actions and main_action
         # main action should be in the [0, 1, 2]
         # We manually clip the actions which are out of action space
@@ -570,8 +518,9 @@ class rankSTEDRecurrentMultiObjectivesEnv(rankSTEDMultiObjectivesEnv):
         # Acquire an image with the given parameters
         sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
         if final_action:
-            reward = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+            reward = f1_score
             reward = reward * self.scale_nanodomain_reward
 
             done = True
@@ -604,17 +553,531 @@ class rankSTEDRecurrentMultiObjectivesEnv(rankSTEDMultiObjectivesEnv):
             "fg_c" : fg_c,
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
-            "reward" : reward
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
         }
 
         # Build the observation space
-        obs = numpy.concatenate((self.episode_memory["actions"][-1], self.episode_memory["mo_objs"][-1]), axis=0)
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(numpy.array(a)) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(numpy.array(mo)) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        return (self.state, obs), reward, done, info
+
+class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `rankSTEDMultiObjectivesEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
+
+        super(rankSTEDRecurrentMultiObjectivesEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
+        )
+
+        # We redefine the observation space in case of recurrent model
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(
+                0, 1, shape=(len(self.obj_names) + len(self.actions),),
+                dtype=numpy.float32
+            ) # Articulation, shape is given by objectives, actions at each steps
+        ))
+
+    def step(self, action):
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # On the last step of the environment we enforce the final decision
+        final_action = self.current_step >= self.spec.max_episode_steps - 1
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+        if final_action:
+            reward = f1_score
+            reward = reward * self.scale_nanodomain_reward
+
+            done = True
+        else:
+            # Reward is proportionnal to the ranked position of the last image
+            articulation, sorted_indices = self.preference_articulation.articulate(
+                self.episode_memory["mo_objs"] + [mo_objs]
+            )
+            index = numpy.argmax(sorted_indices).item()
+            # Reward is given by the position in the sorting
+            reward = (index + 1) / len(sorted_indices)
+
+            done = False
+
+        # Updates memory
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
+        }
+
+        # Build the observation space
+        obs = numpy.concatenate((
+            self.action_normalizer(self.episode_memory["actions"][-1]),
+            self.obj_normalizer(self.episode_memory["mo_objs"][-1])
+        ), axis=0)
+        
+        return (self.state, obs), reward, done, info
+
+class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `rankSTEDMultiObjectivesWithDelayedRewardEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
+
+        super(rankSTEDMultiObjectivesWithDelayedRewardEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
+        )
+
+    def step(self, action):
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # On the last step of the environment we enforce the final decision
+        final_action = self.current_step >= self.spec.max_episode_steps - 1
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+        if final_action:
+
+            # Reward is proportionnal to the ranked position of the last image
+            _, sorted_indices = self.preference_articulation.articulate(
+                self.episode_memory["mo_objs"] + [mo_objs]
+            )
+            index = numpy.argmax(sorted_indices).item()
+            reward = f1_score * self.scale_nanodomain_reward
+
+            weights = numpy.linspace(0, 1, num=len(sorted_indices))
+            weights = weights[[numpy.argwhere(sorted_indices == idx).item() for idx in range(len(weights))]]
+            reward = reward * weights
+
+            done = True
+        else:
+            reward = 0
+            done = False
+
+        # Updates memory
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
+        }
+
+        # Build the observation space
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        return (self.state, obs), reward, done, info
+
+class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `ContextualSTEDMultiObjectivesEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
+
+        super(ContextualSTEDMultiObjectivesEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
+        )
+
+    def step(self, action):
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+        reward = f1_score * self.scale_nanodomain_reward
+
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
+        }
+
+        # Build the observation space
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        return (self.state, obs), reward, done, info
+
+class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `ContextualRecurrentSTEDMultiObjectivesEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
+
+        super(ContextualRecurrentSTEDMultiObjectivesEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
+        )
+
+        # We redefine the observation space in case of recurrent model
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(64, 64, 1), dtype=numpy.uint16),
+            spaces.Box(
+                0, 1, shape=(len(self.obj_names) + len(self.actions),),
+                dtype=numpy.float32
+            ) # Articulation, shape is given by objectives, actions at each steps
+        ))
+
+    def step(self, action):
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+        reward = f1_score * self.scale_nanodomain_reward
+
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
+        }
+
+        # Build the observation space
+        obs = numpy.concatenate((
+            self.action_normalizer(self.episode_memory["actions"][-1]),
+            self.obj_normalizer(self.episode_memory["mo_objs"][-1])
+        ), axis=0)
+
+        return (self.state, obs), reward, done, info
+
+class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `ContextualRankingMultiObjectivesEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
+
+        super(ContextualRankingSTEDMultiObjectivesEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
+        )
+
+    def step(self, action):
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+
+        # Reward is proportionnal to the ranked position of the last image
+        articulation, sorted_indices = self.preference_articulation.articulate(
+            self.episode_memory["mo_objs"] + [mo_objs]
+        )
+        index = numpy.argmax(sorted_indices).item()
+        # Reward is given by the position in the sorting
+        reward = (index + 1) / len(sorted_indices)
+
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
+        }
+
+        # Build the observation space
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        return (self.state, obs), reward, done, info
+
+class ExpertDemonstrationSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
+    """
+    Creates a `ExpertDemonstrationSTEDMultiObjectivesEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
+                    max_episode_steps=10, scale_nanodomain_reward=1.,
+                    normalize_observations=False):
+
+        super(ExpertDemonstrationSTEDMultiObjectivesEnv, self).__init__(
+            bleach_sampling = bleach_sampling,
+            actions = actions,
+            max_episode_steps = max_episode_steps,
+            scale_nanodomain_reward = scale_nanodomain_reward,
+            normalize_observations=normalize_observations
+        )
+
+        # Load expert demonstration
+        self.demonstrations = load_demonstrations()
+
+    def step(self, action):
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+
+        # Reward is proportionnal to the ranked position of the last image
+        articulation, sorted_indices = self.preference_articulation.articulate(
+            self.demonstrations + [mo_objs]
+        )
+        index = numpy.argmax(sorted_indices).item()
+        # Reward is given by the position in the sorting
+        reward = (index + 1) / len(sorted_indices)
+
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        state = self._update_datamap()
+        self.state = state[..., numpy.newaxis]
+
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "f1-score" : f1_score,
+            "nanodomains-coords" : self.synapse.nanodomains_coords
+        }
+
+        # Build the observation space
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
         return (self.state, obs), reward, done, info
 
 class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
     """
-    Creates a `rankSTEDMultiObjectiveEnv`
+    Creates a `rankSTEDMultiObjectivesEnv`
 
     Action space
         The action space is a tuple, where
@@ -738,7 +1201,7 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
             fg_c = numpy.zeros(self.observation_space[0].shape[:-1])
 
             reward = 1
-            mo_objs = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
+            mo_objs = [scales_dict[obj_name]["high"] if obj_name != "SNR" else scales_dict[obj_name]["low"] for obj_name in self.obj_names]
             self.num_request_left -= 1
 
             if len(self.episode_memory["mo_objs"]) > 0:
@@ -1034,7 +1497,7 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
             fg_c = numpy.zeros(self.observation_space[0].shape[:-1])
 
             reward = 1
-            mo_objs = [scales_dict[obj_name]["max"] if obj_name != "SNR" else scales_dict[obj_name]["min"] for obj_name in self.obj_names]
+            mo_objs = [scales_dict[obj_name]["high"] if obj_name != "SNR" else scales_dict[obj_name]["low"] for obj_name in self.obj_names]
             self.num_request_left -= 1
 
             if len(self.episode_memory["mo_objs"]) > 0:
@@ -1207,8 +1670,8 @@ if __name__ == "__main__":
 
     from gym.envs.registration import EnvSpec
 
-    env = rankSTEDRecurrentMultiObjectivesEnv(actions=["p_sted", "p_ex", "pdt"], bleach_sampling="normal", scale_rank_reward=True, select_final=False)
-    env.spec = EnvSpec("STEDranking-v0", max_episode_steps=10)
+    env = ExpertDemonstrationSTEDMultiObjectivesEnv(actions=["p_sted"], bleach_sampling="normal")
+    env.spec = EnvSpec("STEDranking-v0", max_episode_steps=3)
     for i in range(10):
         obs = env.reset()
 
@@ -1216,7 +1679,7 @@ if __name__ == "__main__":
             obs, reward, done, info = env.step(env.action_space.sample())
             # print(obs[1])
             # obs, reward, done, info = env.step(numpy.array(i))
-            print(reward, info["mo_objs"], int(info["action"][-1]))
+            print(reward, info["mo_objs"], info["action"][-1])
 
             if done:
                 print(f"Episode {i} done.\n")
