@@ -336,8 +336,10 @@ class STEDMultiObjectivesEnv(gym.Env):
         self.viewer = None
 
         # seed = self.seed(0)
-
-        self.synapse_generator = SynapseGenerator(mode="mushroom", seed=None)
+        molecules = 5
+        self.synapse_generator = SynapseGenerator(
+            mode="mushroom", seed=None, n_nanodomains=(3, 15), n_molecs_in_domain=(molecules * 20, molecules * 35)
+        )
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
         self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
@@ -662,7 +664,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
             self.action_normalizer(self.episode_memory["actions"][-1]),
             self.obj_normalizer(self.episode_memory["mo_objs"][-1])
         ), axis=0)
-        
+
         return (self.state, obs), reward, done, info
 
 class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
