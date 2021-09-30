@@ -315,7 +315,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         )
 
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 2), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(64, 64, 3), dtype=numpy.uint16),
             spaces.Box(
                 0, 1, shape=(len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
                 dtype=numpy.float32
@@ -392,7 +392,7 @@ class STEDMultiObjectivesEnv(gym.Env):
 
         state = self._update_datamap()
 
-        self.state = numpy.stack((numpy.zeros_like(state), state), axis=-1)
+        self.state = numpy.stack((state, numpy.zeros_like(state), numpy.zeros_like(state)), axis=-1)
         return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
 
     def render(self, info, mode='human'):
@@ -546,7 +546,7 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = numpy.stack((sted_image, state), axis=-1)
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         info = {
             "action" : action,
@@ -601,7 +601,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
         # We redefine the observation space in case of recurrent model
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 2), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(64, 64, 3), dtype=numpy.uint16),
             spaces.Box(
                 0, 1, shape=(len(self.obj_names) + len(self.actions),),
                 dtype=numpy.float32
@@ -645,7 +645,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = numpy.stack((sted_image, state), axis=-1)
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         info = {
             "action" : action,
@@ -735,7 +735,7 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = numpy.stack((sted_image, state), axis=-1)
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         info = {
             "action" : action,
@@ -809,7 +809,7 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = numpy.stack((sted_image, state), axis=-1)
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         info = {
             "action" : action,
@@ -864,7 +864,7 @@ class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
         # We redefine the observation space in case of recurrent model
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 2), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(64, 64, 3), dtype=numpy.uint16),
             spaces.Box(
                 0, 1, shape=(len(self.obj_names) + len(self.actions),),
                 dtype=numpy.float32
@@ -892,7 +892,7 @@ class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = numpy.stack((sted_image, state), axis=-1)
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         info = {
             "action" : action,
@@ -971,7 +971,7 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = numpy.stack((sted_image, state), axis=-1)
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         info = {
             "action" : action,
@@ -1054,7 +1054,7 @@ class ExpertDemonstrationSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["reward"].append(reward)
 
         state = self._update_datamap()
-        self.state = numpy.stack((sted_image, state), axis=-1)
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         info = {
             "action" : action,
