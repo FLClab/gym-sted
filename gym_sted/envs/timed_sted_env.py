@@ -502,8 +502,6 @@ class timedExpSTEDEnvBleach(gym.Env):
             rewards = self._reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
                                                        self.temporal_datamap)
 
-            print(f"reward = {reward}")
-
             done = True
             flash_curve = [numpy.max(self.temporal_datamap.flash_tstack[t])
                            for t in range(self.temporal_datamap.flash_tstack.shape[0])]
@@ -570,8 +568,6 @@ class timedExpSTEDEnvBleach(gym.Env):
 
             # this is the scalarized reward
             reward = (n_molecs_init - n_molecs_post) / n_molecs_init
-
-            print(f"reward = {reward}")
 
             n_molecules_total = numpy.sum(self.temporal_datamap.whole_datamap)
             done = self.temporal_experiment.clock.current_time >= self.exp_time_us or n_molecules_total == 0
