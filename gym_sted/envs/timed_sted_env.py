@@ -263,12 +263,16 @@ class timedExpSTEDEnv(gym.Env):
             # ~!* RETURN DLA SCRAP ICITTE *!~
             return [observation, objective_vals], reward, done, info
 
-    def reset(self):
+    def reset(self, **kwargs):
         self.microscope = self.microscope_generator.generate_microscope(
             phy_react=self.bleach_sampler.sample()
         )
 
-        synapse = self.synapse_generator.generate(rotate=True)
+        seed = kwargs.get("seed", None)
+        flash_delay = kwargs.get("flash_delay", (2, 8))
+        rotate = kwargs.get("rotate", True)
+        # synapse = self.synapse_generator.generate(rotate=True)
+        synapse = self.synapse_generator.generate(rotate=rotate, seed=seed)
 
         if self.flash_mode == "sampled":
             self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_sampled_flash(
@@ -291,7 +295,8 @@ class timedExpSTEDEnv(gym.Env):
                 },
                 decay_time_us=self.exp_time_us,
                 n_decay_steps=20,
-                flash_delay=(2, 8),
+                # flash_delay=(2, 8),
+                flash_delay=flash_delay,
                 individual_flashes=True
             )
         else:
