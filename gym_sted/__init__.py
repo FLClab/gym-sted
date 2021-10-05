@@ -587,6 +587,19 @@ register(
     }
 )
 
+# Timed env for exp 2 (maximize bleaching as reward for debugging)
+register(
+    id="STEDtimed-exp-bleach-debug-v0",
+    entry_point="gym_sted.envs:timedExpSTEDEnvBleach",
+    max_episode_steps=50,   # for exp_time_us=2000000 the max number of steps is 48, set to 50 in case
+    kwargs={
+        "reward_calculator": "NanodomainsRewardCalculator",
+        "actions": ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "constant",
+        "flash_mode": "exp"
+    }
+)
+
 # Timed env for exp 2
 register(
     id="STEDtimed-exp-easy-v5",
