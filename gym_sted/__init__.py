@@ -436,7 +436,7 @@ register(
 
 register(
     id="ContextualRecurrentMOSTED-easy-v0",
-    entry_point="gym_sted.envs:ContextualRankingSTEDMultiObjectivesEnv",
+    entry_point="gym_sted.envs:ContextualRecurrentSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
