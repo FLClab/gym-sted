@@ -8,7 +8,7 @@ from gym_sted.envs.ranking_sted_env import (
     rankSTEDMultiObjectivesWithArticulationEnv,
     ContextualSTEDMultiObjectivesEnv,
     ContextualRankingSTEDMultiObjectivesEnv,
-    ContextualRankingSTEDMultiObjectivesEnv,
+    ContextualRecurrentSTEDMultiObjectivesEnv,
     rankSTEDMultiObjectivesWithDelayedRewardEnv,
     ExpertDemonstrationSTEDMultiObjectivesEnv
 )
