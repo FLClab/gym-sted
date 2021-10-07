@@ -50,10 +50,15 @@ class SynapseGenerator():
         :returns : A `numpy.ndarray` of the molecules
         """
         with warnings.catch_warnings():
+            seed = kwargs.get("seed", None)
             warnings.simplefilter("ignore")
-            synapse = dg.Synapse(self.molecules, mode=self.mode, seed=self.seed)
+            synapse = dg.Synapse(self.molecules, mode=self.mode, seed=seed)
+            # synapse.add_nanodomains(
+            #     self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
+            #     n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
+            # )
             synapse.add_nanodomains(
-                self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
+                self.n_nanodomains, min_dist_nm=self.min_dist, seed=seed,
                 n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
             )
             if rotate:
