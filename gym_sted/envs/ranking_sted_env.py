@@ -523,21 +523,19 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
         mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
         f1_score = self.nb_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c, synapse=self.synapse)
+
+        # Reward is proportionnal to the ranked position of the last image
+        articulation, sorted_indices = self.preference_articulation.articulate(
+            self.episode_memory["mo_objs"] + [mo_objs]
+        )
+        index = numpy.argmax(sorted_indices).item()
+        # Reward is given by the position in the sorting
+        reward = (index + 1) / len(sorted_indices)
+        done = False
+
         if final_action:
-            reward = f1_score
-            reward = reward * self.scale_nanodomain_reward
-
+            reward += f1_score * self.scale_nanodomain_reward
             done = True
-        else:
-            # Reward is proportionnal to the ranked position of the last image
-            articulation, sorted_indices = self.preference_articulation.articulate(
-                self.episode_memory["mo_objs"] + [mo_objs]
-            )
-            index = numpy.argmax(sorted_indices).item()
-            # Reward is given by the position in the sorting
-            reward = (index + 1) / len(sorted_indices)
-
-            done = False
 
         # Updates memory
         self.current_step += 1

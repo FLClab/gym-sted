@@ -2,6 +2,7 @@
 import numpy
 import pickle
 import os
+import bz2
 
 from collections import defaultdict
 from matplotlib import pyplot
@@ -31,7 +32,11 @@ class LeaderBoard:
 
         :returns : A `list` of records
         """
-        records = pickle.load(open(os.path.join(PATH, model, "eval", "stats.pkl"), "rb"))
+        if os.path.isfile(os.path.join(PATH, model, "eval", "stats.pbz2")):
+            with bz2.open(os.path.join(PATH, model, "eval", "stats.pbz2"), "rb") as file:
+                records = pickle.load(file)
+        else:
+            records = pickle.load(open(os.path.join(PATH, model, "eval", "stats.pkl"), "rb"))
         return records[self.bleach]
 
     def get_leaderboard(self):
@@ -44,6 +49,7 @@ class LeaderBoard:
         for model in self.models:
             boards[model] = self.get_model_records(model)
 
+        # Episode objectives
         episode_articulations = []
         for episode in range(self.num_episodes):
             step_articulations = []
@@ -58,9 +64,24 @@ class LeaderBoard:
             episode_articulations.append(step_articulations)
         episode_articulations = numpy.array(episode_articulations)
 
+        episode_f1scores = []
+        for episode in range(self.num_episodes):
+            step_f1scores = []
+            for step in range(self.num_steps):
+                f1scores = []
+                for model in self.models:
+                    f1scores.append(boards[model][episode][step]["f1-score"])
+                sorted_f1scores = numpy.argsort(f1scores)
+                sorted_f1scores = numpy.abs((len(sorted_f1scores) - 1) - sorted_f1scores)
+                step_f1scores.append(sorted_f1scores)
+            episode_f1scores.append(step_f1scores)
+        episode_f1scores = numpy.array(episode_f1scores)
+
         board = {
-            "top1" : self.get_topx(episode_articulations, 1),
-            "top3" : self.get_topx(episode_articulations, 3)
+            "top1-articulation" : self.get_topx(episode_articulations, 1),
+            "top3-articulation" : self.get_topx(episode_articulations, 3),
+            "top1-f1" : self.get_topx(episode_f1scores, 1),
+            "top3-f1" : self.get_topx(episode_f1scores, 3),
         }
         return board
 

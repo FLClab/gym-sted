@@ -50,15 +50,10 @@ class SynapseGenerator():
         :returns : A `numpy.ndarray` of the molecules
         """
         with warnings.catch_warnings():
-            seed = kwargs.get("seed", None)
             warnings.simplefilter("ignore")
-            synapse = dg.Synapse(self.molecules, mode=self.mode, seed=seed)
-            # synapse.add_nanodomains(
-            #     self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
-            #     n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
-            # )
+            synapse = dg.Synapse(self.molecules, mode=self.mode, seed=self.seed)
             synapse.add_nanodomains(
-                self.n_nanodomains, min_dist_nm=self.min_dist, seed=seed,
+                self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
                 n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
             )
             if rotate:
@@ -240,8 +235,8 @@ class MicroscopeGenerator():
     def generate_params(self, **kwargs):
 
         imaging_params = kwargs.get("imaging", {
-            "pdt" : 100e-6,
-            "p_ex" : 2e-6,
+            "pdt" : defaults.PDT,
+            "p_ex" : defaults.P_EX,
             "p_sted" : 0.
         })
         return imaging_params
@@ -257,21 +252,16 @@ class BleachSampler:
         self.mode = mode
         self.value = value
         self.uniform_limits = [
-            (0.25e-8, 0.25e-6), # p_ex
-            (100.0e-11, 15.0e-11) # p_sted
+            (0.001e-5, 0.015e-5), # p_ex
+            (0.004e-8, 0.012e-8) # p_sted
         ]
         self.normal_limits = [
-            # those are the limits we want
-            # (0.25e-7, 1.e-7), # p_ex
-            # (25.0e-11, 100e-11) # p_sted
-
-            # this is the mean and standard deviation that should make us fall within the above limits :)
-            (0.25e-7, 0.5e-7),   # p_ex
-            (25.0e-11, 50.0e-11),   # p_sted
+            (0.008e-5, 0.007e-5 / 2.576), # p_ex
+            (0.008e-8, 0.004e-8 / 2.576) # p_sted
         ]
         self.choices = [
-            (0.5e-7 - 0.25e-7, 0.5e-7, 0.5e-7 + 0.25e-7), # p_ex
-            (50.0e-11 - 25.0e-11, 50.0e-11, 50.0e-11 + 25.0e-11) # p_sted
+            (0.008e-5 - 0.007e-5, 0.008e-5, 0.008e-5 + 0.007e-5), # p_ex
+            (0.008e-8 - 0.004e-8, 0.008e-8, 0.008e-8 + 0.004e-8) # p_sted
         ]
         self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
 
