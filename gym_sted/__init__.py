@@ -606,6 +606,18 @@ register(
     max_episode_steps=1,   # meow
 )
 
+register(
+    id="pretraj-debug-env-lin-v0",
+    entry_point="gym_sted.envs:preTrajDebugEnvLin",
+    max_episode_steps=1,   # meow
+)
+
+register(
+    id="pretraj-debug-env-exp-v0",
+    entry_point="gym_sted.envs:preTrajDebugEnvExp",
+    max_episode_steps=1,   # meow
+)
+
 # Timed env for exp 2 (maximize bleaching as reward for debugging)
 register(
     id="STEDtimed-exp-bleach-debug-v0",
