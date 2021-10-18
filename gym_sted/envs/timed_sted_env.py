@@ -272,7 +272,7 @@ class timedExpSTEDEnv(gym.Env):
         flash_delay = kwargs.get("flash_delay", (2, 8))
         rotate = kwargs.get("rotate", True)
         # synapse = self.synapse_generator.generate(rotate=True)
-        synapse = self.synapse_generator.generate(rotate=rotate, seed=seed)
+        synapse = self.synapse_generator.generate(mode="bt", rotate=rotate, seed=seed)
 
         if self.flash_mode == "sampled":
             self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_sampled_flash(
