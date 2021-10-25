@@ -9,7 +9,7 @@ import gym_sted
 
 from .prefNet import PrefNet
 
-def load_demonstrations(path=None):
+def load_demonstrations(path=None, f1_score=False):
     """
     Loads a set of demonstrations from the given path
 
@@ -21,10 +21,16 @@ def load_demonstrations(path=None):
         path = os.path.join(os.path.dirname(gym_sted.__file__), "prefnet", "demonstrations", "demonstrations.pbz2")
     with bz2.open(path, "rb") as file:
         demonstrations = pickle.load(file)
-    mo_objs = []
-    for demonstration in demonstrations:
-        mo_objs.extend([info["mo_objs"] for info in demonstration])
-    return mo_objs
+    if f1_score:
+        f1_scores = []
+        for demonstration in demonstrations:
+            f1_scores.extend([info["f1-score"] for info in demonstration])
+        return f1_scores
+    else:
+        mo_objs = []
+        for demonstration in demonstrations:
+            mo_objs.extend([info["mo_objs"] for info in demonstration])
+        return mo_objs
 
 class PreferenceArticulator:
     """

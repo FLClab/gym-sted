@@ -304,6 +304,8 @@ register(
     }
 )
 
+# Expert demonstrations
+
 register(
     id="MOSTEDRankingWithExpertDemonstrations-easy-v0",
     entry_point="gym_sted.envs:ExpertDemonstrationSTEDMultiObjectivesEnv",
@@ -331,6 +333,42 @@ register(
 register(
     id="MOSTEDRankingWithExpertDemonstrations-hard-v0",
     entry_point="gym_sted.envs:ExpertDemonstrationSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "normal",
+        "scale_nanodomain_reward" : 1.,
+        "normalize_observations" : True
+    }
+)
+
+register(
+    id="MOSTEDRankingWithExpertDemonstrationsF1Score-easy-v0",
+    entry_point="gym_sted.envs:ExpertDemonstrationF1ScoreSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant",
+        "scale_nanodomain_reward" : 1.,
+        "normalize_observations" : True
+    }
+)
+
+register(
+    id="MOSTEDRankingWithExpertDemonstrationsF1Score-mid-v0",
+    entry_point="gym_sted.envs:ExpertDemonstrationF1ScoreSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "choice",
+        "scale_nanodomain_reward" : 1.,
+        "normalize_observations" : True
+    }
+)
+
+register(
+    id="MOSTEDRankingWithExpertDemonstrationsF1Score-hard-v0",
+    entry_point="gym_sted.envs:ExpertDemonstrationF1ScoreSTEDMultiObjectivesEnv",
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
