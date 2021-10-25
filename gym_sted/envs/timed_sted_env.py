@@ -272,7 +272,7 @@ class timedExpSTEDEnv(gym.Env):
         flash_delay = kwargs.get("flash_delay", (2, 8))
         rotate = kwargs.get("rotate", True)
         # synapse = self.synapse_generator.generate(rotate=True)
-        synapse = self.synapse_generator.generate(rotate=rotate, seed=seed)
+        synapse = self.synapse_generator.generate(mode="bt", rotate=rotate, seed=seed)
 
         if self.flash_mode == "sampled":
             self.temporal_datamap = self.microscope_generator.generate_temporal_datamap_sampled_flash(
@@ -459,6 +459,8 @@ class timedExpSTEDEnvBleach(gym.Env):
 
         self.seed()
 
+        self.bleached_all_in_first_step = None
+
     def step(self, action):
         """
         hmmmm
@@ -497,7 +499,15 @@ class timedExpSTEDEnvBleach(gym.Env):
             n_molecs_post = self.temporal_datamap.base_datamap.sum()
 
             # this is the scalarized reward
-            reward = n_molecs_init - n_molecs_post
+            if self.bleached_all_in_first_step is None:
+                bleach_ratio = (n_molecs_init - n_molecs_post) / n_molecs_init
+                if bleach_ratio == 1:
+                    reward = 1
+                else:
+                    reward = 0
+            else:
+                reward = 0
+
             # this is the vector of individual rewards for individual objectives
             rewards = self._reward_calculator.evaluate(sted_image, conf1, fg_s, fg_c, n_molecs_init, n_molecs_post,
                                                        self.temporal_datamap)
@@ -567,7 +577,14 @@ class timedExpSTEDEnvBleach(gym.Env):
                                                        self.temporal_datamap)
 
             # this is the scalarized reward
-            reward = (n_molecs_init - n_molecs_post) / n_molecs_init
+            if self.bleached_all_in_first_step is None:
+                bleach_ratio = (n_molecs_init - n_molecs_post) / n_molecs_init
+                if bleach_ratio == 1:
+                    reward = 1
+                else:
+                    reward = 0
+            else:
+                reward = 0
 
             n_molecules_total = numpy.sum(self.temporal_datamap.whole_datamap)
             done = self.temporal_experiment.clock.current_time >= self.exp_time_us or n_molecules_total == 0

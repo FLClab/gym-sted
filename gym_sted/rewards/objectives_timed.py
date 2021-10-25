@@ -72,7 +72,7 @@ def find_nanodomains(acquired_signal, pixelsize, window_half_size=3, min_distanc
         params = fitgaussian(data)
         # fwhm is approx 2.355 * sigma, sigma_x is params[3], sigma_y is params[4]
         fwhm_x, fwhm_y = 2.355 * params[3] * pixelsize, 2.355 * params[4] * pixelsize
-        if fwhm_x > 200e-9 or fwhm_y > 200e-9:
+        if fwhm_x > 200e-9 or fwhm_x < 40e-9 or fwhm_y > 200e-9 or fwhm_y < 40e-9:
             pass
         else:
             valid_guesses.append((row, col))

@@ -49,15 +49,29 @@ class SynapseGenerator():
 
         :returns : A `numpy.ndarray` of the molecules
         """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            synapse = dg.Synapse(self.molecules, mode=self.mode, seed=self.seed)
-            synapse.add_nanodomains(
-                self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
-                n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
-            )
-            if rotate:
-                synapse.rotate_and_translate()
+        mode = kwargs.get("mode", None)
+        if mode is None:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                synapse = dg.Synapse(self.molecules, mode=self.mode, seed=self.seed)
+                synapse.add_nanodomains(
+                    self.n_nanodomains, min_dist_nm=self.min_dist, seed=self.seed,
+                    n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
+                )
+                if rotate:
+                    synapse.rotate_and_translate()
+        else:
+            seed = kwargs.get("seed", None)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                synapse = dg.Synapse(self.molecules, mode=self.mode, seed=seed)
+                synapse.add_nanodomains(
+                    self.n_nanodomains, min_dist_nm=self.min_dist, seed=seed,
+                    n_molecs_in_domain=self.n_molecs_in_domain, valid_thickness=self.valid_thickness
+                )
+                if rotate:
+                    synapse.rotate_and_translate()
+
         return synapse
 
 class MoleculesGenerator():
