@@ -1,6 +1,12 @@
 # gym-sted
 
-OpenAI gym implementation of the pysted simulator
+OpenAI gym implementation of the pySTED simulator
+
+## Description
+
+Despite the advantages in resolution granted by super-resolution fluorescence microscopy, the techniques remain challenging to use for non-expert users due to the large number of objectives which need to be optimized to obtain high quality images. Artificial intelligence, in particular reinforcement learning, could prove useful in assisting or controlling image acquisition. However, reinforcement learning approaches are data-hungry in training, rendering their application to super-resolution microscopy infeasible due to the large amount of sample waste training would require. 
+
+`gym-sted` is a environment implemented using OpenAI gym in which the agent must carefully select the imaging parameters of a super-resolution STED microscopy setup in order to achieve some imaging goals.
 
 ## Installation
 
@@ -27,6 +33,10 @@ The experiments and models are available at this [repository](https://github.com
 git clone https://github.com/FLClab/gym-sted-pfrl.git
 pip install -e gym-sted-pfrl
 ```
+
+## Experiments
+
+`gym-sted` is a stand-alone librairy implemented under the OpenAI standards. The users may use the environment in their own code. However, we provide a detailed explanation on how to run experiments with the `gym-sted` environment in [gym-sted-pfrl](https://github.com/FLClab/gym-sted-pfrl).
 
 ## Citation
 
