@@ -53,22 +53,25 @@ class timedExpSTEDEnv(gym.Env):
 
     def __init__(self, time_quantum_us=1, exp_time_us=2000000, actions=["p_sted"],
                  reward_calculator="NanodomainsRewardCalculator", bleach_sampling="constant", detector_noise=0,
-                 flash_mode="exp"):
+                 flash_mode="exp", fluo=defaults.FLUO, future_bleach="default", n_molecs_mult=1):
         valid_flash_modes = ["exp", "sampled"]
         if flash_mode not in valid_flash_modes:
             raise ValueError(f"flash mode {flash_mode} not valid, valid modes are exp or sampled")
 
+        self.n_molecs_mult = n_molecs_mult
         self.flash_mode = flash_mode
         self.bleach_sampling = bleach_sampling
-        self.synapse_generator = SynapseGenerator(mode="mushroom", n_nanodomains=(3, 15), n_molecs_in_domain=0,
-                                                  seed=None)
+        self.synapse_generator = SynapseGenerator(molecules=5 * self.n_molecs_mult, mode="mushroom",
+                                                  n_nanodomains=(3, 15), n_molecs_in_domain=0, seed=None)
 
         self.microscope_generator = MicroscopeGenerator(
             detector={"noise": True,
-                      "background": detector_noise}
+                      "background": detector_noise},
+            fluo=fluo
         )
         self.microscope = self.microscope_generator.generate_microscope()
-        self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
+        self.bleach_sampler = BleachSampler(mode=self.bleach_sampling, fluo=fluo)
+        self.future_bleach = future_bleach
 
         self.actions = actions
         self.action_space = spaces.Box(
@@ -738,22 +741,25 @@ class timedExpSTEDEnvBleach(gym.Env):
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
-    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="sampled", bleach_sampling="normal")
+    env = timedExpSTEDEnv(actions=["pdt", "p_ex", "p_sted"], flash_mode="exp", bleach_sampling="constant",
+                          fluo=defaults.FLUO_x100, n_molecs_mult=100)
 
 
     # env.seed(42)
     state = env.reset()
     print(env.microscope.fluo.phy_react)
-    exit()
-    # for t in range(env.temporal_datamap.flash_tstack.shape[0]):
-    #     indices = {"flashes": t}
-    #     env.temporal_datamap.update_whole_datamap(t)
-    #     env.temporal_datamap.update_dicts(indices)
-    #
-    #     plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
-    #     plt.title(f"t = {t}")
-    #     plt.show()
+    print(env.microscope.fluo.sigma_abs)
+    print(env.temporal_experiment.bleach_mode)
     # exit()
+    for t in range(env.temporal_datamap.flash_tstack.shape[0]):
+        indices = {"flashes": t}
+        env.temporal_datamap.update_whole_datamap(t)
+        env.temporal_datamap.update_dicts(indices)
+
+        plt.imshow(env.temporal_datamap.whole_datamap[env.temporal_datamap.roi])
+        plt.title(f"t = {t}")
+        plt.show()
+    exit()
 
     done = False
     while not done:

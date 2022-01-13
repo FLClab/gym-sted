@@ -1,5 +1,6 @@
 
 from gym.envs.registration import registry, register, make, spec
+from gym_sted import defaults
 
 # Control environment
 register(
@@ -729,6 +730,37 @@ register(
         "bleach_sampling": "normal",
         "flash_mode": "sampled",
         "detector_noise": 100
+    }
+)
+
+###################
+# timed envs where the number of molecules is boosted and fluo params are modified to allow for more consecutive acqs
+###################
+register(
+    id="STEDtimed-exp-easy-x10-v0",
+    entry_point="gym_sted.envs:timedExpSTEDEnv",
+    max_episode_steps=50,   # for exp_time_us=2000000 the max number of steps is 48, set to 50 in case
+    kwargs={
+        "reward_calculator": "NanodomainsRewardCalculator",
+        "actions": ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "constant",
+        "flash_mode": "exp",
+        "fluo": defaults.FLUO_x10,
+        "n_molecs_mult": 10
+    }
+)
+
+register(
+    id="STEDtimed-exp-easy-x100-v0",
+    entry_point="gym_sted.envs:timedExpSTEDEnv",
+    max_episode_steps=50,   # for exp_time_us=2000000 the max number of steps is 48, set to 50 in case
+    kwargs={
+        "reward_calculator": "NanodomainsRewardCalculator",
+        "actions": ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "constant",
+        "flash_mode": "exp",
+        "fluo": defaults.FLUO_x100,
+        "n_molecs_mult": 100
     }
 )
 
