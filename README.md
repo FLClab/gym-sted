@@ -8,15 +8,14 @@ OpenAI gym implementation of the pysted simulator
 
 We recommend using a `Python` environment.
 ```bash
-conda create -n gym-sted python=3.8
+conda create -n gym-sted python=3.10
 conda activate gym-sted
 ```
 
-This requires to install `pysted`
+This requires to install `pysted` and `metrics`
 ```bash
-git clone https://github.com/bturc/audurand_pysted.git
-pip install -r audurand_pysted/requirements.txt
-pip install -e audurand_pysted
+pip install git+https://github.com/FLClab/pySTED
+pip install git+https://github.com/FLClab/metrics
 ```
 
 Then you can install `gym-sted`.

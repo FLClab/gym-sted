@@ -1,13 +1,13 @@
 
-import gym
+import gymnasium as gym
 import numpy
 import random
 import os
 import queue
 
 import pysted.base
-from gym import error, spaces, utils
-from gym.utils import seeding
+from gymnasium import error, spaces, utils
+from gymnasium.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
@@ -89,7 +89,8 @@ class preTrajDebugEnv(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None):
+        super().reset(seed=seed)
         # ? dans mon exemple niaiseux y'a pas vrm d'obs jveux juste qu'il dise 1 :)
         return [numpy.zeros((64, 64, 1)), numpy.array([0])]
 
@@ -158,7 +159,8 @@ class preTrajDebugEnvLin(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None):
+        super().reset(seed=seed)
         # ? dans mon exemple niaiseux y'a pas vrm d'obs jveux juste qu'il dise 1 :)
         return [numpy.zeros((64, 64, 1)), numpy.array([0])]
 
@@ -227,7 +229,8 @@ class preTrajDebugEnvExp(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None):
+        super().reset(seed=seed)
         # ? dans mon exemple niaiseux y'a pas vrm d'obs jveux juste qu'il dise 1 :)
         return [numpy.zeros((64, 64, 1)), numpy.array([0])]
 
@@ -259,4 +262,3 @@ if __name__ == "__main__":
          obs, r, done, info = env.step([0.9])
          print(f"reward = {r}")
      print("done stepping!")
-

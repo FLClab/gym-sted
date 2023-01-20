@@ -1,13 +1,13 @@
 
-import gym
+import gymnasium as gym
 import numpy
 import random
 import os
 import queue
 
 import pysted.base
-from gym import error, spaces, utils
-from gym.utils import seeding
+from gymnasium import error, spaces, utils
+from gymnasium.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
@@ -264,6 +264,7 @@ class timedExpSTEDEnv(gym.Env):
             return [observation, objective_vals], reward, done, info
 
     def reset(self, **kwargs):
+        super().reset(seed=kwargs.get("seed", None))
         self.microscope = self.microscope_generator.generate_microscope(
             phy_react=self.bleach_sampler.sample()
         )
@@ -620,6 +621,7 @@ class timedExpSTEDEnvBleach(gym.Env):
             return [observation, objective_vals], reward, done, info
 
     def reset(self, **kwargs):
+        super().reset(seed=kwargs.get("seed", None))
         self.microscope = self.microscope_generator.generate_microscope(
             phy_react=self.bleach_sampler.sample()
         )

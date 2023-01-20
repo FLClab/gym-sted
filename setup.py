@@ -5,11 +5,13 @@ setup(
     name='gym_sted',
     version='0.0.1',
     install_requires=[
-        "gym",
+        "gymnasium",
         "scikit-learn",
         "scikit-image",
         "numpy",
         "scipy",
-        "matplotlib"
+        "matplotlib",
+        "pysted @ git+https://github.com/FLClab/pySTED.git",
+        "torch"
     ]  # And any other dependencies foo needs
 )

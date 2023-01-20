@@ -1,10 +1,10 @@
-import gym
+import gymnasium as gym
 import numpy
 import random
 
 import pysted.base
-from gym import error, spaces, utils
-from gym.utils import seeding
+from gymnasium import error, spaces, utils
+from gymnasium.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
@@ -135,11 +135,12 @@ class DebugBleachSTEDEnv(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed):
         """
         Resets the environment with a new datamap
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         molecules_disposition = numpy.zeros((20, 20))
         molecules_disposition[5, 5] = 10
         self.datamap = self.microscope_generator.generate_datamap(
@@ -268,11 +269,12 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None):
         """
         Resets the environment with a new datamap
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         molecules_disposition = self.synapse_generator()
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
@@ -400,11 +402,12 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         # return something eventually :)
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None):
         """
         Resets the environment with a new datamap
         :returns: A `TemporalDatmap` object containing the evolution of the datamap as the flash occurs
         """
+        super().reset(seed=seed)
         molecules_disposition = numpy.ones((20, 20)) * 5   # create a filled square dmap for debugging purpouses
         self.temporal_datamap = self.microscope_generator.generate_temporal_datamap(
             temporal_datamap = {
@@ -632,12 +635,13 @@ class DebugRankSTEDRecurrentMultiObjectivesEnv(gym.Env):
 
         return (self.state, obs), reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         # Updates the current bleach function
         self.microscope = self.microscope_generator.generate_microscope(
             phy_react=self.bleach_sampler.sample()

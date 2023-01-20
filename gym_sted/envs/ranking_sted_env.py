@@ -1,11 +1,11 @@
 
-import gym
+import gymnasium as gym
 import numpy
 import random
 import os
 
-from gym import error, spaces, utils
-from gym.utils import seeding
+from gymnasium import error, spaces, utils
+from gymnasium.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
@@ -14,26 +14,7 @@ from gym_sted import rewards, defaults
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler, Normalizer
 from gym_sted.rewards import objectives
 from gym_sted.prefnet import PreferenceArticulator, load_demonstrations
-
-obj_dict = {
-    "SNR" : objectives.Signal_Ratio(75),
-    "Bleach" : objectives.Bleach(),
-    "Resolution" : objectives.Resolution(pixelsize=20e-9),
-    "Squirrel" : objectives.Squirrel(),
-    "NbNanodomains" : objectives.NumberNanodomains()
-}
-bounds_dict = {
-    "SNR" : {"low" : 0.20, "high" : numpy.inf},
-    "Bleach" : {"low" : -numpy.inf, "high" : 0.5},
-    "Resolution" : {"low" : 0, "high" : 100},
-    "NbNanodomains" : {"low" : 0, "high" : numpy.inf}
-}
-scales_dict = {
-    "SNR" : {"low" : 0, "high" : 1},
-    "Bleach" : {"low" : 0, "high" : 1},
-    "Resolution" : {"low" : 40, "high" : 180},
-    "NbNanodomains" : {"low" : 0, "high" : 1}
-}
+from gym_sted.defaults import obj_dict, bounds_dict, scales_dict
 
 class rankSTEDSingleObjectiveEnv(gym.Env):
     """
@@ -100,8 +81,6 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
 
         self.datamap = None
         self.viewer = None
-
-        self.seed()
 
     def step(self, action):
 
@@ -180,14 +159,15 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
             articulation = numpy.zeros((self.spec.max_episode_steps, ))
         else:
             articulation = numpy.eye(self.spec.max_episode_steps)[self.current_articulation]
-        return (self.state, articulation), reward, done, info
+        return (self.state, articulation), reward, done, False, info
 
-    def reset(self):
+    def reset(self, seed=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         self.num_request_left = self.max_num_requests
         self.current_step = 0
         self.current_articulation = -1
@@ -199,7 +179,7 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = state[..., numpy.newaxis]
-        return (self.state, numpy.zeros((self.spec.max_episode_steps,)))
+        return (self.state, numpy.zeros((self.spec.max_episode_steps,))), {}
 
     def render(self, info, mode='human'):
         """
@@ -220,10 +200,6 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():
@@ -337,7 +313,6 @@ class STEDMultiObjectivesEnv(gym.Env):
         self.datamap = None
         self.viewer = None
 
-        # seed = self.seed(0)
         molecules = 5
         self.synapse_generator = SynapseGenerator(
             mode="mushroom", seed=None, n_nanodomains=(3, 15), n_molecs_in_domain=(molecules * 20, molecules * 35)
@@ -372,15 +347,16 @@ class STEDMultiObjectivesEnv(gym.Env):
         """
         raise NotImplementedError
 
-    def reset(self):
+    def reset(self, seed=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         # Updates the current bleach function
         self.microscope = self.microscope_generator.generate_microscope(
-            phy_react=self.bleach_sampler.sample()
+            fluo_params=self.bleach_sampler.sample()
         )
 
         self.current_step = 0
@@ -393,7 +369,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = numpy.stack((state, numpy.zeros_like(state), numpy.zeros_like(state)), axis=-1)
-        return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
+        return (self.state, numpy.zeros((self.observation_space[1].shape[0],))), {}
 
     def render(self, info, mode='human'):
         """
@@ -414,11 +390,6 @@ class STEDMultiObjectivesEnv(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        self.bleach_sampler.seed(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():
@@ -567,7 +538,7 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(numpy.array(mo)) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
 class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -665,7 +636,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
             self.obj_normalizer(self.episode_memory["mo_objs"][-1])
         ), axis=0)
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
 class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
     """
@@ -756,7 +727,7 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
 class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -830,7 +801,7 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
 class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -912,7 +883,7 @@ class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             self.obj_normalizer(self.episode_memory["mo_objs"][-1])
         ), axis=0)
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
 class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -992,7 +963,7 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
 class ExpertDemonstrationSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -1075,7 +1046,7 @@ class ExpertDemonstrationSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
 class ExpertDemonstrationF1ScoreSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -1156,7 +1127,7 @@ class ExpertDemonstrationF1ScoreSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
 class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
     """
@@ -1223,8 +1194,6 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
 
         self.datamap = None
         self.viewer = None
-
-        self.seed()
 
         self.synapse_generator = SynapseGenerator(
             mode="mushroom", seed=None, n_nanodomains=(3, 15), n_molecs_in_domain=(molecules * 20, molecules * 35)
@@ -1341,17 +1310,18 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
             obs.extend(mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
-    def reset(self):
+    def reset(self, seed=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         # Updates the current bleach function
         self.microscope = self.microscope_generator.generate_microscope(
-            phy_react=self.bleach_sampler.sample()
+            fluo_params=self.bleach_sampler.sample()
         )
 
         self.num_request_left = self.max_num_requests
@@ -1366,7 +1336,7 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = numpy.stack((numpy.zeros_like(state), state), axis=-1)
-        return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
+        return (self.state, numpy.zeros((self.observation_space[1].shape[0],))), {}
 
     def render(self, info, mode='human'):
         """
@@ -1520,8 +1490,6 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
         self.datamap = None
         self.viewer = None
 
-        self.seed()
-
         self.synapse_generator = SynapseGenerator(
             mode="mushroom", seed=None, n_nanodomains=(3, 15), n_molecs_in_domain=(molecules * 20, molecules * 35)
         )
@@ -1638,17 +1606,18 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
         obs.extend(self.episode_memory["mo_objs"][-1])
         obs = numpy.array(obs)
 
-        return (self.state, obs), reward, done, info
+        return (self.state, obs), reward, done, False, info
 
-    def reset(self):
+    def reset(self, seed=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         # Updates the current bleach function
         self.microscope = self.microscope_generator.generate_microscope(
-            phy_react=self.bleach_sampler.sample()
+            fluo_params=self.bleach_sampler.sample()
         )
 
         self.num_request_left = self.max_num_requests
@@ -1663,7 +1632,7 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = numpy.stack((numpy.zeros_like(state), state), axis=-1)
-        return (self.state, numpy.zeros((self.observation_space[1].shape[0],)))
+        return (self.state, numpy.zeros((self.observation_space[1].shape[0],))), {}
 
     def render(self, info, mode='human'):
         """

@@ -3,9 +3,9 @@ import numpy
 import argparse
 import sys
 import random
-import gym
+import gymnasium as gym
 
-from gym import wrappers, logger, envs
+from gymnasium import wrappers, logger, envs
 from collections import OrderedDict
 from tqdm.auto import trange
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     obj_names = ["Resolution", "Bleach", "Squirrel"]
 
     parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('env_id', nargs='?', default='gym_sted:STED-v0', help='Select the environment to run')
+    parser.add_argument('env_id', nargs='?', default='gym_sted:STEDmultiply-v1', help='Select the environment to run')
     args = parser.parse_args()
 
     # You can set the level to logger.DEBUG or logger.WARN if you
@@ -46,16 +46,11 @@ if __name__ == '__main__':
     import tempfile
     outdir = './tmp/random-agent-results'
     outdir = tempfile.mkdtemp()
-    env = wrappers.Monitor(env, directory=outdir, force=True)
-    env.seed(0)
     agent = RandomAgent(env.action_space)
 
     # Update creates a reward calculator
     objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in obj_names})
     bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in obj_names})
-    env.update_(
-        reward_calculator=RewardCalculator(objs)
-    )
 
     episode_count = 2
     reward = 0
@@ -63,10 +58,10 @@ if __name__ == '__main__':
     render = False
 
     for i in range(episode_count):
-        observation = env.reset()
+        observation, info = env.reset(seed=None)
         while True:
             action = agent.act(observation, reward, done)
-            observation, reward, done, info = env.step(action)
+            observation, reward, done, truncated, info = env.step(action)
             if render:
                 # renders the acquired images
                 env.render(info)

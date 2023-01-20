@@ -11,8 +11,10 @@ import warnings
 
 from scipy.ndimage import gaussian_filter
 from scipy import optimize
+from skimage import measure, filters, morphology
 from skimage.transform import resize
 from skimage.feature import peak_local_max
+from skimage.metrics import structural_similarity
 from sklearn.metrics import mean_squared_error
 
 import metrics
@@ -290,15 +292,17 @@ class Squirrel(Objective):
     :param method: A `str` of the method used to optimize
     :param normalize: A `bool` wheter to normalize the images
     """
-    def __init__(self, method="L-BFGS-B", normalize=False):
+    def __init__(self, method="L-BFGS-B", normalize=False, use_foreground=False):
 
+        self.label = "Squirrel"
         self.method = method
-        self.bounds = (-numpy.inf, numpy.inf), (-numpy.inf, numpy.inf), (0, numpy.inf)
+        self.bounds = (-1e+6, 1e+6), (-1e+6, 1e+6), (0, 1e+2)
         self.x0 = (1, 0, 1)
         self.normalize = normalize
         self.select_optimal = numpy.argmin
+        self.use_foreground = use_foreground
 
-    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg):
+    def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg, *args, **kwargs):
         """
         Evaluates the objective
 
@@ -311,20 +315,47 @@ class Squirrel(Objective):
                             (2d array of bool: True on foreground, False on background).
         """
         # Optimize
+        if not numpy.any(sted_stack[0]):
+            return 1.
+#             return mean_squared_error(confocal_init[confocal_fg], sted_stack[0][confocal_fg], squared=False)
+        # Optimize
         result = self.optimize(sted_stack[0], confocal_init)
-        return self.squirrel(result.x, sted_stack[0], confocal_init)
+        if self.use_foreground:
+            return 1.0 - self.out_squirrel(result.x, sted_stack[0], confocal_init, confocal_fg=confocal_fg)
+        else:
+            return 1.0 - self.out_squirrel(result.x, sted_stack[0], confocal_init)
 
-    def squirrel(self, x, *args):
+    def squirrel(self, x, *args, **kwargs):
         """
         Computes the reconstruction error between
         """
         alpha, beta, sigma = x
         super_resolution, reference = args
+        confocal_fg = kwargs.get("confocal_fg", numpy.ones_like(super_resolution, dtype=bool))
         convolved = self.convolve(super_resolution, alpha, beta, sigma)
         if self.normalize:
             reference = (reference - reference.min()) / (reference.max() - reference.min() + 1e-9)
             convolved = (convolved - convolved.min()) / (convolved.max() - convolved.min() + 1e-9)
-        error = mean_squared_error(reference, convolved, squared=False)
+        error = mean_squared_error(reference[confocal_fg], convolved[confocal_fg], squared=True)
+#         error = numpy.quantile(numpy.abs(reference[confocal_fg] - convolved[confocal_fg]), [0.95]).item()
+#         error = numpy.mean((reference[confocal_fg] - convolved[confocal_fg]))
+        return error
+
+    def out_squirrel(self, x, *args, **kwargs):
+        """
+        Computes the reconstruction error between
+        """
+        alpha, beta, sigma = x
+        super_resolution, reference = args
+        confocal_fg = kwargs.get("confocal_fg", numpy.ones_like(super_resolution, dtype=bool))
+        convolved = self.convolve(super_resolution, alpha, beta, sigma)
+        if self.normalize:
+            reference = (reference - reference.min()) / (reference.max() - reference.min() + 1e-9)
+            convolved = (convolved - convolved.min()) / (convolved.max() - convolved.min() + 1e-9)
+#         error = numpy.mean(numpy.abs(reference[confocal_fg] - convolved[confocal_fg]))
+#         error = numpy.std(numpy.abs(reference[confocal_fg] - convolved[confocal_fg]))
+        _, S = structural_similarity(reference, convolved, full=True)
+        error = numpy.mean(S[confocal_fg])
         return error
 
     def optimize(self, super_resolution, reference):
@@ -338,7 +369,7 @@ class Squirrel(Objective):
         """
         result = optimize.minimize(
             self.squirrel, self.x0, args=(super_resolution, reference),
-            method="L-BFGS-B", bounds=((-numpy.inf, numpy.inf), (-numpy.inf, numpy.inf), (0, numpy.inf))
+            method=self.method, bounds=(self.bounds)
         )
         return result
 
@@ -359,8 +390,16 @@ class NumberNanodomains(Objective):
     def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg, *args, **kwargs):
         synapse = kwargs.get("synapse")
 
+        filtered = filters.gaussian(sted_stack[0], sigma=0.5)
+        threshold = numpy.quantile(filtered, 0.99)
+        mask = filtered > threshold
+        mask = morphology.remove_small_objects(mask, min_size=4, connectivity=2)
+        labels = measure.label(mask)
+
+        guess_coords = peak_local_max(filtered, min_distance=self.threshold, labels=labels, exclude_border=False)
+
         gt_coords = numpy.asarray(synapse.nanodomains_coords)
-        guess_coords = peak_local_max(sted_stack, min_distance=self.threshold, threshold_rel=0.5)
+        # guess_coords = peak_local_max(sted_stack, min_distance=self.threshold, threshold_rel=0.5)
 
         detector = metrics.CentroidDetectionError(gt_coords, guess_coords, self.threshold, algorithm="hungarian")
         f1_score = detector.f1_score

@@ -152,12 +152,7 @@ class MicroscopeGenerator():
         laser_sted = base.DonutBeam(**self.laser_sted_params)
         detector = base.Detector(**self.detector_params)
         objective = base.Objective(**self.objective_params)
-        if "phy_react" in kwargs:
-            tmp = self.fluo_params.copy()
-            tmp["phy_react"] = kwargs.get("phy_react")
-            fluo = base.Fluorescence(**tmp)
-        else:
-            fluo = base.Fluorescence(**self.fluo_params)
+        fluo = base.Fluorescence(**kwargs.get("fluo_params", self.fluo_params))
 
         self.microscope = base.Microscope(laser_ex, laser_sted, detector, objective, fluo)
         i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
@@ -265,18 +260,18 @@ class BleachSampler:
         self.seed(seed)
         self.mode = mode
         self.value = value
-        self.uniform_limits = [
-            (0.001e-5, 0.015e-5), # p_ex
-            (0.004e-8, 0.012e-8) # p_sted
-        ]
-        self.normal_limits = [
-            (0.008e-5, 0.007e-5 / 2.576), # p_ex
-            (0.008e-8, 0.004e-8 / 2.576) # p_sted
-        ]
-        self.choices = [
-            (0.008e-5 - 0.007e-5, 0.008e-5, 0.008e-5 + 0.007e-5), # p_ex
-            (0.008e-8 - 0.004e-8, 0.008e-8, 0.008e-8 + 0.004e-8) # p_sted
-        ]
+        self.uniform_limits = {
+            "k1" : (0.5e-15, 3.0e-15), # p_ex
+            "b" : (1.58, 1.62) # p_sted
+        }
+        self.normal_limits = {
+            "k1" : (1.3e-15, 1.3e-15 / 2.576), # p_ex
+            "b" : (1.6, 1.6 / 10) # p_sted
+        }
+        self.choices = {
+            "k1" : (0.5e-15, 1.3e-15, 3.0e-15), # p_ex
+            "b" : (1.58, 1.6, 1.62) # p_sted
+        }
         self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
 
     def seed(self, seed=None):
@@ -300,39 +295,36 @@ class BleachSampler:
         """
         if self.value:
             return self.value
-        return defaults.FLUO["phy_react"]
+        return defaults.FLUO
 
     def _uniform_sample(self):
         """
         Implements a uniform sampling of the bleach parameters
         """
-        tmp = defaults.FLUO["phy_react"].copy()
-        for key, (m, M) in zip(tmp.keys(), self.uniform_limits):
-            tmp[key] = random.uniform(m, M)
-        return tmp
+        fluo = defaults.FLUO.copy()
+        for key, (m, M) in self.uniform_limits.items():
+            fluo[key] = random.uniform(m, M)
+        return fluo
 
     def _normal_sample(self):
         """
         Implements a normal sampling of the bleach parameters
         """
-        # là live il utilise 25e-11 comme moyenne et 100e-11 comme std, mais on
-        # veut que ces chiffres là soient nos limites, donc je dois modif le code :)
-        tmp = defaults.FLUO["phy_react"].copy()
-        for key, (mu, std) in zip(tmp.keys(), self.normal_limits):
-            tmp[key] = random.gauss(mu, std)
-            if tmp[key] < 0:
-                while tmp[key] < 0:
-                    tmp[key] = random.gauss(mu, std)
-        return tmp
+        fluo = defaults.FLUO.copy()
+        for key, (mu, std) in self.normal_limits.items():
+            fluo[key] = random.gauss(mu, std)
+            while fluo[key] < 0:
+                fluo[key] = random.gauss(mu, std)
+        return fluo
 
     def _choice_sample(self):
         """
         Implements a choice sampling of the bleach parameters
         """
-        tmp = defaults.FLUO["phy_react"].copy()
-        for key, choices in zip(tmp.keys(), self.choices):
-            tmp[key] = random.choice(choices)
-        return tmp
+        fluo = defaults.FLUO.copy()
+        for key, choices in self.choices.items():
+            fluo[key] = random.choice(choices)
+        return fluo
 
 class RecordingQueue:
     def __init__(self, object: object, maxlen: int, num_sensors: tuple):
