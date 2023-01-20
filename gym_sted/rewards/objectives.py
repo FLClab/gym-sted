@@ -390,7 +390,7 @@ class NumberNanodomains(Objective):
     def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg, *args, **kwargs):
         synapse = kwargs.get("synapse")
 
-        filtered = filters.gaussian(sted_stack[0], sigma=0.5)
+        filtered = filters.gaussian(sted_stack, sigma=0.5)
         threshold = numpy.quantile(filtered, 0.99)
         mask = filtered > threshold
         mask = morphology.remove_small_objects(mask, min_size=4, connectivity=2)

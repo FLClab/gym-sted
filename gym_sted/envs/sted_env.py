@@ -1,10 +1,10 @@
 
-import gymnasium as gym
+import gym
 import numpy
 import random
 
-from gymnasium import error, spaces, utils
-from gymnasium.utils import seeding
+from gym import error, spaces, utils
+from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
@@ -95,7 +95,7 @@ class STEDEnv(gym.Env):
         self.initial_count = self.datamap.whole_datamap.sum()
 
         self.state = state[..., numpy.newaxis]
-        return (self.state, numpy.zeros((len(self.obj_names) + len(self.actions), ))), {}
+        return (self.state, numpy.zeros((len(self.obj_names) + len(self.actions), )))
 
     def render(self, info, mode='human'):
         """
@@ -116,10 +116,6 @@ class STEDEnv(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():
@@ -270,7 +266,7 @@ class STEDEnvWithoutVision(gym.Env):
         self.initial_count = self.datamap.whole_datamap.sum()
 
         self.state = state[..., numpy.newaxis]
-        return numpy.zeros((len(self.obj_names) + len(self.actions), )), {}
+        return numpy.zeros((len(self.obj_names) + len(self.actions), ))
 
     def render(self, info, mode='human'):
         """
@@ -291,10 +287,6 @@ class STEDEnvWithoutVision(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():
@@ -424,7 +416,7 @@ class STEDEnvWithDelayedReward(STEDEnv):
         self.initial_count = self.datamap.whole_datamap.sum()
 
         self.state = state[..., numpy.newaxis]
-        return (self.state, numpy.zeros((len(self.obj_names) + len(self.actions), ))), {}
+        return (self.state, numpy.zeros((len(self.obj_names) + len(self.actions), )))
 
 if __name__ == "__main__":
 

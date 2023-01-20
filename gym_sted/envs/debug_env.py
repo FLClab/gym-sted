@@ -1,10 +1,10 @@
-import gymnasium as gym
+import gym
 import numpy
 import random
 
 import pysted.base
-from gymnasium import error, spaces, utils
-from gymnasium.utils import seeding
+from gym import error, spaces, utils
+from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
@@ -159,10 +159,6 @@ class DebugBleachSTEDEnv(gym.Env):
         self.initial_count = molecules_disposition.sum()
         return self.state[..., numpy.newaxis]
 
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
     # def get_statistics(self):
     #     # return [("mean-action", [])]
     #     return [tuple((key, numpy.mean(value, axis=0))) if value else tuple((key, None)) for key, value in self.statistics.items()]
@@ -269,7 +265,7 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
         :returns : A `numpy.ndarray` of the molecules
@@ -291,10 +287,6 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         self.initial_count = molecules_disposition.sum()
         return self.state[..., numpy.newaxis]
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def close(self):
         return None
@@ -402,7 +394,7 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         # return something eventually :)
         return observation, reward, done, info
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
         :returns: A `TemporalDatmap` object containing the evolution of the datamap as the flash occurs
@@ -438,10 +430,6 @@ class DebugBleachSTEDTimedEnv(gym.Env):
 
         # that's it ? ... ???
         return self.state[numpy.newaxis, ...] / 1024.0   # normalize to ensure good NN learning
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def close(self):
         return None
@@ -635,7 +623,7 @@ class DebugRankSTEDRecurrentMultiObjectivesEnv(gym.Env):
 
         return (self.state, obs), reward, done, info
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
@@ -680,10 +668,6 @@ class DebugRankSTEDRecurrentMultiObjectivesEnv(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():

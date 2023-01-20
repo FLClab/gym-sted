@@ -3,9 +3,9 @@ import numpy
 import argparse
 import sys
 import random
-import gymnasium as gym
+import gym as gym
 
-from gymnasium import wrappers, logger, envs
+from gym import wrappers, logger, envs
 from collections import OrderedDict
 from tqdm.auto import trange
 

@@ -1,11 +1,11 @@
 
-import gymnasium as gym
+import gym
 import numpy
 import random
 import os
 
-from gymnasium import error, spaces, utils
-from gymnasium.utils import seeding
+from gym import error, spaces, utils
+from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
@@ -159,9 +159,9 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
             articulation = numpy.zeros((self.spec.max_episode_steps, ))
         else:
             articulation = numpy.eye(self.spec.max_episode_steps)[self.current_articulation]
-        return (self.state, articulation), reward, done, False, info
+        return (self.state.astype(numpy.uint16), articulation.astype(numpy.float32)), reward, done, False, info
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
@@ -179,7 +179,7 @@ class rankSTEDSingleObjectiveEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = state[..., numpy.newaxis]
-        return (self.state, numpy.zeros((self.spec.max_episode_steps,))), {}
+        return (self.state.astype(numpy.uint16), numpy.zeros((self.spec.max_episode_steps,), dtype=numpy.float32)), {}
 
     def render(self, info, mode='human'):
         """
@@ -293,7 +293,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2**16, shape=(64, 64, 3), dtype=numpy.uint16),
             spaces.Box(
-                0, 1, shape=(len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
+                0, 1024, shape=(len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
                 dtype=numpy.float32
             ) # Articulation, shape is given by objectives, actions at each steps
         ))
@@ -347,7 +347,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         """
         raise NotImplementedError
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
@@ -369,7 +369,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = numpy.stack((state, numpy.zeros_like(state), numpy.zeros_like(state)), axis=-1)
-        return (self.state, numpy.zeros((self.observation_space[1].shape[0],))), {}
+        return (self.state.astype(numpy.uint16), numpy.zeros((self.observation_space[1].shape[0],), dtype=numpy.float32)), {}
 
     def render(self, info, mode='human'):
         """
@@ -538,7 +538,7 @@ class rankSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(numpy.array(mo)) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
 class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -636,7 +636,7 @@ class rankSTEDRecurrentMultiObjectivesEnv(STEDMultiObjectivesEnv):
             self.obj_normalizer(self.episode_memory["mo_objs"][-1])
         ), axis=0)
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
 class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
     """
@@ -727,7 +727,7 @@ class rankSTEDMultiObjectivesWithDelayedRewardEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
 class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -801,7 +801,7 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
 class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -883,7 +883,7 @@ class ContextualRecurrentSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             self.obj_normalizer(self.episode_memory["mo_objs"][-1])
         ), axis=0)
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
 class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -963,7 +963,7 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
 class ExpertDemonstrationSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -1046,7 +1046,7 @@ class ExpertDemonstrationSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
 class ExpertDemonstrationF1ScoreSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
@@ -1127,7 +1127,7 @@ class ExpertDemonstrationF1ScoreSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
 class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
     """
@@ -1310,9 +1310,9 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
             obs.extend(mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
@@ -1336,7 +1336,7 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = numpy.stack((numpy.zeros_like(state), state), axis=-1)
-        return (self.state, numpy.zeros((self.observation_space[1].shape[0],))), {}
+        return (self.state.astype(numpy.uint16), numpy.zeros((self.observation_space[1].shape[0],), dtype=numpy.float32)), {}
 
     def render(self, info, mode='human'):
         """
@@ -1357,10 +1357,6 @@ class rankSTEDMultiObjectivesWithArticulationEnv(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():
@@ -1606,9 +1602,9 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
         obs.extend(self.episode_memory["mo_objs"][-1])
         obs = numpy.array(obs)
 
-        return (self.state, obs), reward, done, False, info
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
@@ -1632,7 +1628,7 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
         state = self._update_datamap()
 
         self.state = numpy.stack((numpy.zeros_like(state), state), axis=-1)
-        return (self.state, numpy.zeros((self.observation_space[1].shape[0],))), {}
+        return (self.state.astype(numpy.uint16), numpy.zeros((self.observation_space[1].shape[0],), dtype=numpy.float32)), {}
 
     def render(self, info, mode='human'):
         """
@@ -1653,10 +1649,6 @@ class rankSTEDRecurrentMultiObjectivesWithArticulationEnv(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():

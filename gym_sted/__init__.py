@@ -1,5 +1,5 @@
 
-from gymnasium.envs.registration import registry, register, make, spec
+from gym.envs.registration import registry, register, make, spec
 
 # Control environment
 register(
