@@ -1,13 +1,13 @@
 
-import gymnasium as gym
+import gym
 import numpy
 import random
 import os
 import queue
 
 import pysted.base
-from gymnasium import error, spaces, utils
-from gymnasium.utils import seeding
+from gym import error, spaces, utils
+from gym.utils import seeding
 from matplotlib import pyplot
 from collections import OrderedDict
 
