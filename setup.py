@@ -5,7 +5,7 @@ setup(
     name='gym_sted',
     version='0.0.1',
     install_requires=[
-        "gym",
+        "gym>=0.26",
         "scikit-learn",
         "scikit-image",
         "numpy",

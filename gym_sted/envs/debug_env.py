@@ -10,34 +10,10 @@ from collections import OrderedDict
 
 import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler, Normalizer
 from gym_sted.rewards import objectives
-from gym_sted.prefnet import PreferenceArticulator
-
-obj_dict = {
-    "SNR" : objectives.Signal_Ratio(75),
-    "Bleach" : objectives.Bleach(),
-    "Resolution" : objectives.Resolution(pixelsize=20e-9),
-    "Squirrel" : objectives.Squirrel(),
-    "NbNanodomains" : objectives.NumberNanodomains()
-}
-bounds_dict = {
-    "SNR" : {"min" : 0.20, "max" : numpy.inf},
-    "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 100},
-    "NbNanodomains" : {"min" : 0, "max" : numpy.inf}
-}
-scales_dict = {
-    "SNR" : {"min" : 0, "max" : 1},
-    "Bleach" : {"min" : 0, "max" : 1},
-    "Resolution" : {"min" : 40, "max" : 180},
-    "NbNanodomains" : {"min" : 0, "max" : 1}
-}
-action_spaces = {
-    "p_sted" : {"low" : 0., "high" : 5.0e-3},
-    "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},
-    "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
-}
+from gym_sted.prefnet import PreferenceArticulator, load_demonstrations
+from gym_sted.defaults import action_spaces, obj_dict, bounds_dict, scales_dict
 
 class DebugBleachSTEDEnv(gym.Env):
 
