@@ -92,7 +92,6 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
         return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
-
 class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
     Creates a `ContextualRankingMultiObjectivesEnv`

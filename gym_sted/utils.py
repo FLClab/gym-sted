@@ -285,7 +285,7 @@ class BleachSampler:
         """
         Implements the sample method
 
-        :returns : A `dict` of `phy_react`
+        :returns : A `dict` of fluorescent parameters
         """
         return self.sampling_method()
 
