@@ -479,7 +479,7 @@ register(
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
-        "bleach_sampling" : "normal",
+        "bleach_sampling" : "uniform",
         "scale_nanodomain_reward" : 1.,
     }
 )
@@ -637,6 +637,28 @@ register(
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "constant",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="SequenceMOSTED-mid-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "choice",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="SequenceMOSTED-hard-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
         "scale_nanodomain_reward" : 1.,
     }
 )

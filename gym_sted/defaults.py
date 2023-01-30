@@ -60,3 +60,18 @@ scales_dict = {
     "Resolution" : {"low" : 40, "high" : 180},
     "NbNanodomains" : {"low" : 0, "high" : 1}
 }
+
+fluorescence_criterions = {
+    "bleach" : {
+        "p_ex" : [1.0e-6, 10.0e-6],
+        "p_sted" : [100e-3, 200e-3],
+        "pdt" : [1.0e-6, 10.0e-6],
+        "target" : [0.1, 0.9]
+    },
+    "signal" : { # Avoids breaking the microscope with saturation of detector
+        "p_ex" : 10.0e-6,
+        "p_sted" : 0.,
+        "pdt" : 10.0e-6,
+        "target" : 200.
+    },
+}
