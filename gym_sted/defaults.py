@@ -72,6 +72,6 @@ fluorescence_criterions = {
         "p_ex" : 10.0e-6,
         "p_sted" : 0.,
         "pdt" : 10.0e-6,
-        "target" : [50., 200.]
+        "target" : [10., 200.]
     },
 }
