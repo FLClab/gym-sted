@@ -149,10 +149,10 @@ class MicroscopeGenerator():
     def generate_microscope(self, **kwargs):
 
         # Generating objects necessary for acquisition simulation
-        laser_ex = base.GaussianBeam(**self.laser_ex_params)
-        laser_sted = base.DonutBeam(**self.laser_sted_params)
-        detector = base.Detector(**self.detector_params)
-        objective = base.Objective(**self.objective_params)
+        laser_ex = base.GaussianBeam(**kwargs.get("laser_ex_params", self.laser_ex_params))
+        laser_sted = base.DonutBeam(**kwargs.get("laser_sted_params", self.laser_sted_params))
+        detector = base.Detector(**kwargs.get("detector_params", self.detector_params))
+        objective = base.Objective(**kwargs.get("objective_params", self.objective_params))
         fluo = base.Fluorescence(**kwargs.get("fluo_params", self.fluo_params))
 
         self.microscope = base.Microscope(laser_ex, laser_sted, detector, objective, fluo)
@@ -328,7 +328,7 @@ class BleachSampler:
 
         criterion = ChoiceCriterion(self.criterions)
         optimized = self.optimizer.optimize(criterion)
-        
+
         for objective, params in optimized.items():
             for key, value in params.items():
                 fluo[key] = value
