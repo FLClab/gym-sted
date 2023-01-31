@@ -305,6 +305,7 @@ class BleachSampler:
         for objective, params in optimized.items():
             for key, value in params.items():
                 fluo[key] = value
+                
         return fluo
 
     # def _normal_sample(self):

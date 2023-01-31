@@ -19,6 +19,8 @@ from sklearn.metrics import mean_squared_error
 
 import metrics
 
+from .utils import validate_positions
+
 class Objective(ABC):
     """Abstract class to implement an objective to optimize. When inheriting this class,
     one needs to define an attribute `label` to be used for figure labels, and a
@@ -397,6 +399,7 @@ class NumberNanodomains(Objective):
         labels = measure.label(mask)
 
         guess_coords = peak_local_max(filtered, min_distance=self.threshold, labels=labels, exclude_border=False)
+        guess_coords = validate_positions(guess_coords, sted_stack, (synapse.datamap_pixelsize_nm) * 1e-9)
 
         gt_coords = numpy.asarray(synapse.nanodomains_coords)
         # guess_coords = peak_local_max(sted_stack, min_distance=self.threshold, threshold_rel=0.5)
