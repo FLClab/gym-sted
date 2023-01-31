@@ -299,14 +299,12 @@ class BleachSampler:
         """
         fluo = defaults.FLUO.copy()
 
-        criterion = RandomCriterion(self.criterions)
+        criterion = UniformCriterion(self.criterions)
         optimized = self.optimizer.optimize(criterion)
 
         for objective, params in optimized.items():
             for key, value in params.items():
                 fluo[key] = value
-
-        print(fluo)
         return fluo
 
     # def _normal_sample(self):
@@ -332,8 +330,6 @@ class BleachSampler:
         for objective, params in optimized.items():
             for key, value in params.items():
                 fluo[key] = value
-
-        print(fluo)
         return fluo
 
 class RecordingQueue:
