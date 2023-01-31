@@ -3,37 +3,22 @@ import numpy
 
 from scipy import optimize
 
-def gaussian(height, center_x, center_y, width_x, width_y):
+def gaussian(amplitude, center_x, center_y, width_x, width_y):
     """Returns a gaussian function with the given parameters"""
-    width_x = float(width_x)
-    width_y = float(width_y)
-    return lambda x,y: height*numpy.exp(
-                -(((center_x-x)/width_x)**2+((center_y-y)/width_y)**2)/2)
-
-
-def moments(data):
-    """Returns (height, x, y, width_x, width_y)
-    the gaussian parameters of a 2D distribution by calculating its
-    moments """
-    total = data.sum()
-    X, Y = numpy.indices(data.shape)
-    x = (X*data).sum()/total
-    y = (Y*data).sum()/total
-    col = data[:, int(y)]
-    width_x = numpy.sqrt(numpy.abs((numpy.arange(col.size)-x)**2*col).sum()/col.sum())
-    row = data[int(x), :]
-    width_y = numpy.sqrt(numpy.abs((numpy.arange(row.size)-y)**2*row).sum()/row.sum())
-    height = data.max()
-    return height, x, y, width_x, width_y
-
+    width_x = float(width_x) + 1e-3 # numerical stability
+    width_y = float(width_y) + 1e-3 # numerical stability
+    return lambda x,y: amplitude * numpy.exp(
+        -1 * (((center_x - x) ** 2.0 / (2 * width_x ** 2.0)) + ((center_y - y) ** 2.0 / (2 * width_y ** 2.0)))
+    )
 
 def fitgaussian(data):
     """Returns (height, x, y, width_x, width_y)
     the gaussian parameters of a 2D distribution found by a fit"""
-    params = moments(data)
-    errorfunction = lambda p: numpy.ravel(gaussian(*p)(*numpy.indices(data.shape)) -
-                                 data)
-    p, success = optimize.leastsq(errorfunction, params)
+    X, Y = numpy.indices(data.shape)
+    X = X - numpy.max(X) / 2
+    Y = Y - numpy.max(Y) / 2
+    errorfunction = lambda p: numpy.ravel(gaussian(*p)(X, Y) - data)
+    p, success = optimize.leastsq(errorfunction, [data.max(), 0, 0, 1, 1], ftol=1e-3)
     return p
 
 
@@ -47,7 +32,6 @@ def validate_positions(guess_positions, acquired_signal, pixelsize, window_half_
     # then we try to fit a gaussian on every identified peak. If one of its sigma is > 200 nm, we reject the guess
     valid_guesses = []
     for row, col in guess_positions:
-        #TODO : what if the ND is on the edge of the image? I should test this :)
         data = padded_signal[(row + window_half_size) - window_half_size:
                              (row + window_half_size) + window_half_size + 1,
                              (col + window_half_size) - window_half_size:
