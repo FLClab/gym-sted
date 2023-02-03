@@ -4,12 +4,12 @@ import numpy
 from .rewards import objectives
 
 P_STED = 150.0e-3
-P_EX = 2.0e-6
+P_EX = 10.0e-6
 PDT = 10.0e-6
 
 LASER_EX = {"lambda_" : 635e-9}
 LASER_STED = {"lambda_" : 750e-9, "zero_residual" : 0.01, "anti_stoke": False}
-DETECTOR = {"noise" : True, "background" : 2 / PDT}
+DETECTOR = {"noise" : True, "background" : 0.5 / PDT}
 OBJECTIVE = {
     "transmission" : {488: 0.84, 535: 0.85, 550: 0.86, 585: 0.85, 575: 0.85, 635: 0.84, 690: 0.82, 750: 0.77, 775: 0.75}
 }
@@ -17,7 +17,7 @@ FLUO = {
     "lambda_": 6.9e-7,
     "qy": 0.65,
     "sigma_abs": {
-        635: 2.14e-20,
+        635: 3.2e-21,
         750: 3.5e-25
     },
     "sigma_ste": {
@@ -27,8 +27,8 @@ FLUO = {
     "tau_vib": 1e-12,
     "tau_tri": 0.0000012,
     "k0": 0,
-    "k1": 1.3e-15,
-    "b": 1.6,
+    "k1": 2.9e-16,
+    "b": 1.66,
     "triplet_dynamics_frac": 0
 }
 

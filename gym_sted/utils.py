@@ -402,6 +402,7 @@ class FluorescenceOptimizer():
     given photobleaching and signal in the acquired images.
     """
     FACTORS = {
+        "synthetic" : 1.0,
         "clusters" : 2.25, # CaMKII & PSD95
         "actin" : 3.0,
         "tubulin" : 3.75
@@ -421,7 +422,7 @@ class FluorescenceOptimizer():
         self.iterations = iterations
         self.pixelsize = pixelsize
 
-        assert sample in ["clusters", "actin", "tubulin"]
+        assert sample in self.FACTORS.keys()
         self.correction_factor = self.FACTORS[sample]
         self.scale_factor = 40.
 
