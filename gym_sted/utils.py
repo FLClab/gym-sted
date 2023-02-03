@@ -512,7 +512,7 @@ class FluorescenceOptimizer():
                     self.optimize_bleach, x0=[k1, b],
                     args=(params["p_ex"], params["p_sted"], params["pdt"], params["target"]),
                     options={"eps" : 0.01, "maxiter": 100}, tol=1e-3,
-                    bounds = [(0., numpy.inf), (0., numpy.inf)]
+                    bounds = [(0., numpy.inf), (0., 5.0)]
                 )
                 k1, b = res.x
 
