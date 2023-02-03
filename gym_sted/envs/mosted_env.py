@@ -111,7 +111,6 @@ class STEDMultiObjectivesEnv(gym.Env):
         self.microscope = self.microscope_generator.generate_microscope(
             fluo_params=self.bleach_sampler.sample()
         )
-
         self.current_step = 0
         self.episode_memory = {
             "actions" : [],
