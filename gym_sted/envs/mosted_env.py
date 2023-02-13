@@ -72,7 +72,10 @@ class STEDMultiObjectivesEnv(gym.Env):
         )
         self.microscope_generator = MicroscopeGenerator()
         self.microscope = self.microscope_generator.generate_microscope()
-        self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
+        if isinstance(self.bleach_sampling, dict):
+            self.bleach_sampler = BleachSampler(**self.bleach_sampling)
+        else:
+            self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})

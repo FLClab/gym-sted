@@ -1,0 +1,74 @@
+{
+    "high-signal_high-bleach": {
+        "b": 1.6613097830489925,
+        "k0": 0,
+        "k1": 8.804304035697448e-16,
+        "lambda_": 6.9e-07,
+        "qy": 0.65,
+        "sigma_abs": {
+            "635": 3.2305765495522115e-21,
+            "750": 3.5e-25
+        },
+        "sigma_ste": {
+            "750": 3e-22
+        },
+        "tau": 3.5e-09,
+        "tau_tri": 1.2e-06,
+        "tau_vib": 1e-12,
+        "triplet_dynamics_frac": 0
+    },
+    "high-signal_low-bleach": {
+        "b": 1.6611853284800109,
+        "k0": 0,
+        "k1": 2.9482048756192956e-16,
+        "lambda_": 6.9e-07,
+        "qy": 0.65,
+        "sigma_abs": {
+            "635": 3.16055702786833e-21,
+            "750": 3.5e-25
+        },
+        "sigma_ste": {
+            "750": 3e-22
+        },
+        "tau": 3.5e-09,
+        "tau_tri": 1.2e-06,
+        "tau_vib": 1e-12,
+        "triplet_dynamics_frac": 0
+    },
+    "low-signal_high-bleach": {
+        "b": 1.722446806004363,
+        "k0": 0,
+        "k1": 8.825790725976868e-16,
+        "lambda_": 6.9e-07,
+        "qy": 0.65,
+        "sigma_abs": {
+            "635": 4.495531970598889e-22,
+            "750": 3.5e-25
+        },
+        "sigma_ste": {
+            "750": 3e-22
+        },
+        "tau": 3.5e-09,
+        "tau_tri": 1.2e-06,
+        "tau_vib": 1e-12,
+        "triplet_dynamics_frac": 0
+    },
+    "low-signal_low-bleach": {
+        "b": 1.722265511847811,
+        "k0": 0,
+        "k1": 2.7357173347771323e-16,
+        "lambda_": 6.9e-07,
+        "qy": 0.65,
+        "sigma_abs": {
+            "635": 4.435329051047577e-22,
+            "750": 3.5e-25
+        },
+        "sigma_ste": {
+            "750": 3e-22
+        },
+        "tau": 3.5e-09,
+        "tau_tri": 1.2e-06,
+        "tau_vib": 1e-12,
+        "triplet_dynamics_frac": 0
+    }
+}

@@ -463,6 +463,62 @@ register(
 )
 
 register(
+    id="ContextualMOSTED-easy-hslb-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_low-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTED-easy-hshb-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_high-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTED-easy-lslb-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_low-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTED-easy-lshb-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_high-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
     id="ContextualMOSTED-mid-v0",
     entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
     max_episode_steps=10,

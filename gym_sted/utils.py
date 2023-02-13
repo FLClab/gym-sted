@@ -2,6 +2,8 @@
 import numpy
 import random
 import warnings
+import os
+import json
 
 from skimage import filters
 from scipy import optimize
@@ -155,7 +157,7 @@ class MicroscopeGenerator():
         objective = base.Objective(**kwargs.get("objective_params", self.objective_params))
         fluo = base.Fluorescence(**kwargs.get("fluo_params", self.fluo_params))
 
-        self.microscope = base.Microscope(laser_ex, laser_sted, detector, objective, fluo)
+        self.microscope = base.Microscope(laser_ex, laser_sted, detector, objective, fluo, load_cache=True)
         i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
 
         return self.microscope
@@ -257,10 +259,17 @@ class BleachSampler:
 
     :param mode: The sampling mode from {constant, uniform, choice}
     """
-    def __init__(self, mode, value=None, seed=None, criterions=None):
+    def __init__(self, mode, value=None, routine=None, seed=None, criterions=None):
         self.seed(seed)
         self.mode = mode
         self.value = value
+        self.routine = routine
+
+        if isinstance(self.routine, str):
+            self.value = self.load_routine(
+                os.path.join(os.path.dirname(__file__), "routines", "routines.json"),
+                self.routine
+            )
 
         if isinstance(criterions, type(None)):
             self.criterions = defaults.fluorescence_criterions
@@ -269,6 +278,20 @@ class BleachSampler:
         self.optimizer = FluorescenceOptimizer()
 
         self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
+
+    def load_routine(self, file, routine_id):
+        """
+        Loads the required routine
+        """
+        data = json.load(open(file, "r"))
+        routine = data[routine_id]
+        # Some key requires specfic type
+        for sigma in ["sigma_abs", "sigma_ste"]:
+            tmp = {}
+            for key, value in routine[sigma].items():
+                tmp[int(key)] = value
+            routine[sigma] = tmp
+        return routine
 
     def seed(self, seed=None):
         """
