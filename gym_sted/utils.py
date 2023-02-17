@@ -158,7 +158,7 @@ class MicroscopeGenerator():
         fluo = base.Fluorescence(**kwargs.get("fluo_params", self.fluo_params))
 
         self.microscope = base.Microscope(laser_ex, laser_sted, detector, objective, fluo, load_cache=True)
-        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
+        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=False)
 
         return self.microscope
 
@@ -169,7 +169,7 @@ class MicroscopeGenerator():
             "datamap_pixelsize" : self.pixelsize
         })
 
-        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
+        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=False)
         datamap = base.Datamap(**datamap_params)
         datamap.set_roi(i_ex, "max")
 

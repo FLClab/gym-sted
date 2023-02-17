@@ -65,6 +65,7 @@ class SequenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         )
 
         super().reset(seed=seed)
+
         # Updates the current bleach function
         self.microscope = self.microscope_generator.generate_microscope(
             fluo_params=self.bleach_sampler.sample()
@@ -106,7 +107,7 @@ class SequenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         # Updates memory
         done = self.current_step >= self.spec.max_episode_steps - 1
         done = done or self.datamap["base"].max() == 0
-        
+
         self.current_step += 1
         self.episode_memory["mo_objs"].append(mo_objs)
         self.episode_memory["actions"].append(action)
