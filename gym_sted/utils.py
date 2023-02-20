@@ -419,7 +419,7 @@ class Normalizer:
             x = numpy.array(x)
         return numpy.array([(_x - self.scales[name]["low"]) / (self.scales[name]["high"] - self.scales[name]["low"]) for name, _x in zip(self.names, x)])
 
-class FluorescenceOptimizer():
+class FluorescenceOptimizer(): 
     """
     Optimizes the parameters of fluorescence to obtain the
     given photobleaching and signal in the acquired images.
