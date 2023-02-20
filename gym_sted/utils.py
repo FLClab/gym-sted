@@ -419,7 +419,7 @@ class Normalizer:
             x = numpy.array(x)
         return numpy.array([(_x - self.scales[name]["low"]) / (self.scales[name]["high"] - self.scales[name]["low"]) for name, _x in zip(self.names, x)])
 
-class FluorescenceOptimizer(): 
+class FluorescenceOptimizer():
     """
     Optimizes the parameters of fluorescence to obtain the
     given photobleaching and signal in the acquired images.
@@ -528,37 +528,36 @@ class FluorescenceOptimizer():
         """
         k1, b, sigma_abs = self.default_parameters()
         sigma_abs = sigma_abs[int(self.microscope.excitation.lambda_ * 1e9)]
-        
+
         # Rescales values
         k1 = k1 * 1e+15
         sigma_abs = sigma_abs * 1e+20
-        
         for i in range(self.iterations):
-            
+
             # Optimize signal constant
             params = criterions.get("signal", None)
             if params:
                 # Slowly moving towards target
                 current = self.expected_confocal_signal(params["p_ex"], params["p_sted"], params["pdt"])
-                weighted_target = current + (i + 1) / self.iterations * (params["target"] - current)                
+                weighted_target = current + (i + 1) / self.iterations * (params["target"] - current)
                 res = optimize.minimize(
                     self.optimize_sigma_abs, x0=[sigma_abs],
-                    args=(params["p_ex"], params["p_sted"], params["pdt"], params["target"]),
+                    args=(params["p_ex"], params["p_sted"], params["pdt"], weighted_target),
                     options={"eps" : 0.01, "maxiter": 25}, tol=1e-3,
                     bounds = [(0., numpy.inf)]
                 )
-                sigma_abs = res.x.item()            
-            
+                sigma_abs = res.x.item()
+
             params = criterions.get("bleach", None)
             if params:
                 # Slowly moving towards target
                 current = self.expected_bleach(params["p_ex"], params["p_sted"], params["pdt"])
-                weighted_target = current + (i + 1) / self.iterations * (params["target"] - current)                
-                
+                weighted_target = current + (i + 1) / self.iterations * (params["target"] - current)
+
                 # Optimize bleaching constants
                 res = optimize.minimize(
                     self.optimize_bleach, x0=[k1, b],
-                    args=(params["p_ex"], params["p_sted"], params["pdt"], params["target"]),
+                    args=(params["p_ex"], params["p_sted"], params["pdt"], weighted_target),
                     options={"eps" : 0.01, "maxiter": 25}, tol=1e-3,
                     bounds = [(0., numpy.inf), (0., 5.0)]
                 )
@@ -622,11 +621,11 @@ class FluorescenceOptimizer():
 
         intensity = numpy.sum(effective * datamap)
         photons = self.microscope.fluo.get_photons(intensity)
-        
+
         for _ in range(25):
             p = self.microscope.detector.get_signal(photons, pdt, self.microscope.sted.rate)
             photons_mean.append(p)
-        
+
         photons = numpy.mean(photons_mean)
         return photons
 
