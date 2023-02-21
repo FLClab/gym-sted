@@ -9,7 +9,7 @@ ROUTINES = {
         "bleach" : {
             "p_ex" : 10e-6,
             "p_sted" : 150e-3,
-            "pdt" : 10.0e-6,
+            "pdt" : 30.0e-6,
             "target" : 0.2
         },
         "signal" : {
@@ -21,10 +21,10 @@ ROUTINES = {
     },
     "high-signal_high-bleach" : {
         "bleach" : {
-            "p_ex" : 10e-6,
+            "p_ex" : 2e-6,
             "p_sted" : 150e-3,
-            "pdt" : 10.0e-6,
-            "target" : 0.50
+            "pdt" : 25.0e-6,
+            "target" : 0.7
         },
         "signal" : {
             "p_ex" : 10.0e-6,
@@ -37,7 +37,7 @@ ROUTINES = {
         "bleach" : {
             "p_ex" : 10e-6,
             "p_sted" : 150e-3,
-            "pdt" : 10.0e-6,
+            "pdt" : 30.0e-6,
             "target" : 0.2
         },
         "signal" : {
@@ -49,10 +49,10 @@ ROUTINES = {
     },
     "low-signal_high-bleach" : {
         "bleach" : {
-            "p_ex" : 10e-6,
+            "p_ex" : 2e-6,
             "p_sted" : 150e-3,
-            "pdt" : 10.0e-6,
-            "target" : 0.50
+            "pdt" : 25.0e-6,
+            "target" : 0.7
         },
         "signal" : {
             "p_ex" : 10.0e-6,
