@@ -1,6 +1,6 @@
 # gym-sted
 
-OpenAI gym implementation of the pySTED simulation tool.
+OpenAI gym implementation of the [pySTED simulation tool](https://github.com/FLClab/pySTED).
 
 ## Installation
 
