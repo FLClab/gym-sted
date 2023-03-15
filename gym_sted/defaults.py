@@ -3,6 +3,15 @@ import numpy
 
 from .rewards import objectives
 
+DATAMAP_PATH = [
+    "./data/datamap/actin",
+    "./data/datamap/psd95",
+    "./data/datamap/lifeact",
+    "./data/datamap/PSD95-Bassoon",                
+    "./data/datamap/tubulin",
+    "./data/datamap/camkii"
+]
+
 P_STED = 150.0e-3
 P_EX = 10.0e-6
 PDT = 10.0e-6
@@ -42,7 +51,7 @@ action_spaces = {
 obj_dict = {
     "SNR" : objectives.Signal_Ratio(75),
     "Bleach" : objectives.Bleach(),
-    "Resolution" : objectives.Resolution(pixelsize=20e-9, res_cap=225),
+    "Resolution" : objectives.Resolution(pixelsize=20e-9, res_cap=300),
     "Squirrel" : objectives.Squirrel(normalize=True, use_foreground=True),
     "NbNanodomains" : objectives.NumberNanodomains()
 }

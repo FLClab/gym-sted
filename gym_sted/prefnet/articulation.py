@@ -64,4 +64,4 @@ class PreferenceArticulator:
 
         # Sorts the scores
         sorted_scores = numpy.argsort(scores.ravel())
-        return sorted_scores[-1], sorted_scores
+        return scores, sorted_scores[-1], sorted_scores

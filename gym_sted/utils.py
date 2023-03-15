@@ -430,8 +430,12 @@ class FluorescenceOptimizer():
     FACTORS = {
         "synthetic" : 1.0,
         "clusters" : 2.25, # CaMKII & PSD95
+        "camkii" : 2.25,
+        "psd95" : 2.25,
+        "PSD95-Bassoon" : 2.25,
         "actin" : 3.0,
-        "tubulin" : 3.75
+        "tubulin" : 3.75,
+        "lifeact" : 3.75
     }
 
     def __init__(self, microscope=None, sample="clusters", iterations=25, pixelsize=20e-9):
@@ -456,6 +460,10 @@ class FluorescenceOptimizer():
         self.microscope.fluo.sigma_abs = defaults.FLUO["sigma_abs"]
         self.microscope.fluo.k1 = defaults.FLUO["k1"]
         self.microscope.fluo.b = defaults.FLUO["b"]
+
+    def set_correction_factor(self, sample):
+        assert sample in self.FACTORS.keys()
+        self.correction_factor = self.FACTORS[sample]
 
     def default_parameters(self):
         """

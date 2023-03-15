@@ -1,4 +1,5 @@
 # user-defined
+/data
 /tmp*
 .microscope_cache.pkl
 /results

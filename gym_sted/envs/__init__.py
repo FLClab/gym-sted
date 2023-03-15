@@ -22,6 +22,9 @@ from gym_sted.envs.recurrent_sted_env import (
 from gym_sted.envs.sequence_sted_env import (
     SequenceSTEDMultiObjectivesEnv
 )
+from gym_sted.envs.preference_sted_env import (
+    PreferenceSTEDMultiObjectivesEnv
+)
 from gym_sted.envs.timed_sted_env import timedExpSTEDEnv, timedExpSTEDEnvBleach
 from gym_sted.envs.timed_sted_env_debug import timedExpSTEDEnvDebug
 from gym_sted.envs.pre_traj_debugging_env import preTrajDebugEnv, preTrajDebugEnvLin, preTrajDebugEnvExp
