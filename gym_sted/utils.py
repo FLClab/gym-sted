@@ -261,10 +261,11 @@ class BleachSampler:
 
     :param mode: The sampling mode from {constant, uniform, choice}
     """
-    def __init__(self, mode, value=None, seed=None):
+    def __init__(self, mode, value=None, seed=None, fluo=defaults.FLUO):
         self.seed(seed)
         self.mode = mode
         self.value = value
+        self.fluo = fluo
         self.uniform_limits = [
             (0.001e-5, 0.015e-5), # p_ex
             (0.004e-8, 0.012e-8) # p_sted
@@ -300,7 +301,7 @@ class BleachSampler:
         """
         if self.value:
             return self.value
-        return defaults.FLUO["phy_react"]
+        return self.fluo["phy_react"]
 
     def _uniform_sample(self):
         """
