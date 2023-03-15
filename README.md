@@ -1,26 +1,21 @@
 # gym-sted
 
-OpenAI gym implementation of the pySTED simulator
-
-## Description
-
-Despite the advantages in resolution granted by super-resolution fluorescence microscopy, the techniques remain challenging to use for non-expert users due to the large number of objectives which need to be optimized to obtain high quality images. Artificial intelligence, in particular reinforcement learning, could prove useful in assisting or controlling image acquisition. However, reinforcement learning approaches are data-hungry in training, rendering their application to super-resolution microscopy infeasible due to the large amount of sample waste training would require. 
-
-`gym-sted` is a environment implemented using OpenAI gym in which the agent must carefully select the imaging parameters of a super-resolution STED microscopy setup in order to achieve some imaging goals.
+OpenAI gym implementation of the pysted simulator
 
 ## Installation
 
-We recommend using a Python environment. Our installation was tested using Python 3.7.
+### Gym
+
+We recommend using a `Python` environment.
 ```bash
-conda create -n gym-sted python=3.7
+conda create -n gym-sted python=3.10
 conda activate gym-sted
 ```
 
-This requires to install `pysted`
+This requires to install `pysted` and `metrics`
 ```bash
-git clone https://github.com/FLClab/pySTED.git
-pip install -r pySTED/requirements.txt
-pip install -e pySTED
+pip install git+https://github.com/FLClab/pySTED
+pip install git+https://github.com/FLClab/metrics
 ```
 
 Then you can install `gym-sted`.

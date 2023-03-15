@@ -7,7 +7,13 @@ import bz2
 
 import gym_sted
 
+<<<<<<< HEAD
 def load_demonstrations(path=None):
+=======
+from .prefNet import PrefNet
+
+def load_demonstrations(path=None, f1_score=False):
+>>>>>>> 825f7744ebfccfe813f42d3725fce7994deb5bf6
     """
     Loads a set of demonstrations from the given path
 
@@ -19,7 +25,54 @@ def load_demonstrations(path=None):
         path = os.path.join(os.path.dirname(gym_sted.__file__), "prefnet", "demonstrations", "demonstrations.pbz2")
     with bz2.open(path, "rb") as file:
         demonstrations = pickle.load(file)
+<<<<<<< HEAD
     f1_scores = []
     for demonstration in demonstrations:
         f1_scores.extend([info["f1-score"] for info in demonstration])
     return f1_scores
+=======
+    if f1_score:
+        f1_scores = []
+        for demonstration in demonstrations:
+            f1_scores.extend([info["f1-score"] for info in demonstration])
+        return f1_scores
+    else:
+        mo_objs = []
+        for demonstration in demonstrations:
+            mo_objs.extend([info["mo_objs"] for info in demonstration])
+        return mo_objs
+
+class PreferenceArticulator:
+    """
+    Creates a preference articulation model
+    """
+    def __init__(self, nb_obj=3):
+        model_path = os.path.join(os.path.dirname(gym_sted.__file__), "prefnet", "2021-07-12-06-40-29_ResolutionBleachSNR")
+
+        self.model = PrefNet(nb_obj=nb_obj)
+        self.model = self.model.loading(os.path.join(model_path, "weights.t7"))
+        self.model.eval()
+        self.config = json.load(open(os.path.join(model_path, "config.json"), "r"))
+
+    def articulate(self, thetas):
+        """
+        Articulates the decision from a list of possible choices
+
+        :param thetas: A `list` of rewards
+
+        :returns : An `int` of the optimal choice
+                   An `numpy.ndarray` of the scores from low to high
+        """
+        # Converts to numpy ndarray and resize
+        thetas = numpy.array(thetas)
+
+        # Rescales the data appropriately
+        thetas = (thetas - self.config["train_mean"]) / self.config["train_std"]
+
+        # Predicts the objectives
+        scores = self.model.predict(thetas)
+
+        # Sorts the scores
+        sorted_scores = numpy.argsort(scores.ravel())
+        return sorted_scores[-1], sorted_scores
+>>>>>>> 825f7744ebfccfe813f42d3725fce7994deb5bf6
