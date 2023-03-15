@@ -112,7 +112,7 @@ class Resolution(Objective):
         self.select_optimal = numpy.argmin
         self.pixelsize = pixelsize
 #            self.kwargs = kwargs
-        self.res_cap=250
+        self.res_cap=res_cap
 
     def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg):
         with warnings.catch_warnings():
