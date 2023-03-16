@@ -38,11 +38,10 @@ class STEDMultiObjectivesEnv(gym.Env):
 
         self.actions = actions
         self.action_space = spaces.Box(
-            low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions]),
-            high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions]),
+            low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions], dtype=numpy.float32),
+            high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions], dtype=numpy.float32),
             dtype=numpy.float32
         )
-
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2**16, shape=(64, 64, 3), dtype=numpy.uint16),
             spaces.Box(
