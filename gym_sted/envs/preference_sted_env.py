@@ -78,6 +78,7 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         reward, _, _ = self.preference_articulation.articulate(
             [mo_objs]
         )
+        reward = reward.item()
 
         # Updates memory
         done = self.current_step >= self.spec.max_episode_steps - 1
