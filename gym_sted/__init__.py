@@ -454,68 +454,68 @@ register(
 register(
     id="PreferenceMOSTED-easy-hslb-v0",
     entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
-    max_episode_steps=10,
+    max_episode_steps=30,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : {
             "mode" : "constant",
             "routine" : "high-signal_low-bleach"
         },
-        "scale_nanodomain_reward" : 1.,
+        "max_episode_steps" : 30
     }
 )
 
 register(
     id="PreferenceMOSTED-easy-hshb-v0",
     entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
-    max_episode_steps=10,
+    max_episode_steps=30,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : {
             "mode" : "constant",
             "routine" : "high-signal_high-bleach"
         },
-        "scale_nanodomain_reward" : 1.,
+        "max_episode_steps" : 30        
     }
 )
 
 register(
     id="PreferenceMOSTED-easy-lslb-v0",
     entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
-    max_episode_steps=10,
+    max_episode_steps=30,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : {
             "mode" : "constant",
             "routine" : "low-signal_low-bleach"
         },
-        "scale_nanodomain_reward" : 1.,
+        "max_episode_steps" : 30        
     }
 )
 
 register(
     id="PreferenceMOSTED-easy-lshb-v0",
     entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
-    max_episode_steps=10,
+    max_episode_steps=30,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : {
             "mode" : "constant",
             "routine" : "low-signal_high-bleach"
         },
-        "scale_nanodomain_reward" : 1.,
+        "max_episode_steps" : 30        
     }
 )
 
 register(
     id="PreferenceMOSTED-hard-v0",
     entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
-    max_episode_steps=10,
+    max_episode_steps=30,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "uniform",
-        "scale_nanodomain_reward" : 1.,
-    }
+        "max_episode_steps" : 30
+    },
 )
 
 ############################################

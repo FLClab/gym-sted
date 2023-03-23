@@ -48,6 +48,15 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             scale_nanodomain_reward = scale_nanodomain_reward,
             normalize_observations=normalize_observations
         )
+        
+        # Update observation space
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(224, 224, 3), dtype=numpy.uint16),
+            spaces.Box(
+                0, 1024, shape=(len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
+                dtype=numpy.float32
+            ) # Articulation, shape is given by objectives, actions at each steps
+        ))        
 
         self.datamap_generator = DatamapGenerator(
             molecules=40, molecules_scale=0.1,
@@ -69,6 +78,7 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         reward, _, _ = self.preference_articulation.articulate(
             [mo_objs]
         )
+        reward = reward.item()
 
         # Updates memory
         done = self.current_step >= self.spec.max_episode_steps - 1
