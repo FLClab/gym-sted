@@ -461,6 +461,7 @@ register(
             "mode" : "constant",
             "routine" : "high-signal_low-bleach"
         },
+        "max_episode_steps" : 30
     }
 )
 
@@ -474,6 +475,7 @@ register(
             "mode" : "constant",
             "routine" : "high-signal_high-bleach"
         },
+        "max_episode_steps" : 30        
     }
 )
 
@@ -487,6 +489,7 @@ register(
             "mode" : "constant",
             "routine" : "low-signal_low-bleach"
         },
+        "max_episode_steps" : 30        
     }
 )
 
@@ -500,6 +503,7 @@ register(
             "mode" : "constant",
             "routine" : "low-signal_high-bleach"
         },
+        "max_episode_steps" : 30        
     }
 )
 
@@ -510,7 +514,8 @@ register(
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "uniform",
-    }
+        "max_episode_steps" : 30
+    },
 )
 
 ############################################
