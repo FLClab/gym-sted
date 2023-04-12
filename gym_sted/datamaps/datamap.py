@@ -1,6 +1,7 @@
 import numpy 
 import os, glob
 import json
+import random
 
 from skimage import filters
 from collections import defaultdict
@@ -13,7 +14,7 @@ class DatamapGenerator:
     def __init__(
         self, mode="real", shape=(224, 224),
         molecules=(10, 100), random_state=None, path=None,
-        molecules_scale=0.1
+        molecules_scale=0.1, augment=False
     ):
         """
         Instantiates the `DatamapGenerator`
@@ -26,6 +27,7 @@ class DatamapGenerator:
         self.molecules_scale = molecules_scale
         self.shape = shape
         self.idx = None
+        self.augment = augment
 
         self.path = path
         if isinstance(self.path, str):
@@ -123,5 +125,17 @@ class DatamapGenerator:
         i += sx
         # j, i = self.random.randint(0, datamap.shape[0] - shape[0]), self.random.randint(0, datamap.shape[1] - shape[1])
         datamap = datamap[j - sy : j + sy, i - sx : i + sx]
+        
+        if self.augment:
+            # 90 rotation
+            if random.random() < 0.5:
+                k = random.randint(1, 3)
+                datamap = numpy.rot90(datamap, k, axes=(-2, -1))
+            # Up-down flip
+            if random.random() < 0.5: 
+                datamap = numpy.flip(datamap, axis=-2)
+            # Left-right flip
+            if random.random() < 0.5: 
+                datamap = numpy.flip(datamap, axis=-1)                
 
         return datamap
