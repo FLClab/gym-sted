@@ -37,7 +37,7 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=10, scale_nanodomain_reward=1.,
-                    normalize_observations=False):
+                    normalize_observations=True):
 
         self.group = None
 
@@ -80,6 +80,15 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         )
         reward = reward.item()
 
+        # print("STED: {:0.2f} - Exc: {:0.2f} - Pdt: {:0.2f}".format(
+        #     action[0] * 1e+3, action[1] * 1e+6, action[2] * 1e+6
+        # ))
+        # print("Res: {:0.2f} - Pb: {:0.2f} - SNR: {:0.2f}".format(
+        #     *mo_objs
+        # ))
+        # print(reward)     
+        # print()
+
         # Updates memory
         done = self.current_step >= self.spec.max_episode_steps - 1
         self.current_step += 1
@@ -105,7 +114,6 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
-
         state = self._update_datamap()
         self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
