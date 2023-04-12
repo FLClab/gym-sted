@@ -34,7 +34,7 @@ class STEDMultiObjectivesEnv(gym.Env):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=10, scale_nanodomain_reward=1.,
-                    normalize_observations=False):
+                    normalize_observations=True):
 
         self.actions = actions
         self.action_space = spaces.Box(

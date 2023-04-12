@@ -40,7 +40,7 @@ class SequenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=10, scale_nanodomain_reward=1.,
-                    normalize_observations=False):
+                    normalize_observations=True):
 
         super(SequenceSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
