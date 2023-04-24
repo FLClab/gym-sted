@@ -3,7 +3,7 @@ import gym
 import numpy
 import random
 import os
-import time
+import abberior
 
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -17,9 +17,19 @@ from gym_sted.rewards import objectives
 from gym_sted.prefnet import PreferenceArticulator, load_demonstrations
 from gym_sted.defaults import obj_dict, bounds_dict, scales_dict
 
-class STEDMultiObjectivesEnv(gym.Env):
+from gym_sted.microscopes.abberior import AbberiorMicroscope
+
+# Requires stedopt to be installed
+from stedopt.tools import RegionSelector
+
+# Sets the configuration
+config_overview = abberior.microscope.get_config("Setting overview configuration.")
+config_conf = abberior.microscope.get_config("Setting confocal configuration.")
+config_sted = abberior.microscope.get_config("Setting STED configuration.")
+
+class AbberiorSTEDMultiObjectivesEnv(gym.Env):
     """
-    Creates a `STEDMultiObjectivesEnv`
+    Creates a `AbberiorSTEDMultiObjectivesEnv`
 
     Action space
         The action space corresponds to the imaging parameters
@@ -33,18 +43,25 @@ class STEDMultiObjectivesEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR"]
 
-    def __init__(self, bleach_sampling="constant", actions=["p_sted"],
-                    max_episode_steps=10, scale_nanodomain_reward=1.,
+    def __init__(self, actions=["p_sted", "p_ex", "pdt"],
+                    max_episode_steps=30,
                     normalize_observations=True):
 
         self.actions = actions
+        self.default_action_space = {
+            "p_sted" : {"low" : 0., "high" : 50.},
+            "p_ex" : {"low" : 0., "high" : 10.},
+            "pdt" : {"low" : 1.0e-6, "high" : 30.0e-6},
+        }
+
         self.action_space = spaces.Box(
-            low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions], dtype=numpy.float32),
-            high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions], dtype=numpy.float32),
+            low=numpy.array([self.default_action_space[name]["low"] for name in self.actions]),
+            high=numpy.array([self.default_action_space[name]["high"] for name in self.actions]),
             dtype=numpy.float32
         )
+
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(64, 64, 3), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(224, 224, 3), dtype=numpy.uint16),
             spaces.Box(
                 0, 1024, shape=(len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
                 dtype=numpy.float32
@@ -52,48 +69,37 @@ class STEDMultiObjectivesEnv(gym.Env):
         ))
 
         self.state = None
-        self.initial_count = None
-        self.synapse = None
         self.current_step = 0
-        self.bleach_sampling = bleach_sampling
-        self.scale_nanodomain_reward = scale_nanodomain_reward
         self.episode_memory = {
             "actions" : [],
             "mo_objs" : [],
             "reward" : [],
         }
 
-        self.datamap = None
         self.viewer = None
 
-        molecules = 5
-        self.synapse_generator = SynapseGenerator(
-            mode="mushroom", seed=None, n_nanodomains=(3, 15), n_molecs_in_domain=(molecules * 20, molecules * 35)
+        self.measurements = {
+            "conf" : config_conf,
+            "sted" : config_sted
+        }
+        self.microscope = AbberiorMicroscope(
+            self.measurements
         )
-        self.microscope_generator = MicroscopeGenerator()
-        self.microscope = self.microscope_generator.generate_microscope()
-        if isinstance(self.bleach_sampling, dict):
-            self.bleach_sampler = BleachSampler(**self.bleach_sampling)
-        else:
-            self.bleach_sampler = BleachSampler(mode=self.bleach_sampling)
 
         objs = OrderedDict({obj_name : obj_dict[obj_name] for obj_name in self.obj_names})
         bounds = OrderedDict({obj_name : bounds_dict[obj_name] for obj_name in self.obj_names})
         scales = OrderedDict({obj_name : scales_dict[obj_name] for obj_name in self.obj_names})
         self.mo_reward_calculator = rewards.MORewardCalculator(objs, bounds=bounds, scales=scales)
-        self.nb_reward_calculator = rewards.NanodomainsRewardCalculator(
-            {"NbNanodomains" : obj_dict["NbNanodomains"]},
-            bounds={"NbNanodomains" : bounds_dict["NbNanodomains"]},
-            scales={"NbNanodomains" : scales_dict["NbNanodomains"]}
-        )
 
         # Loads preference articulation model
         self.preference_articulation = PreferenceArticulator()
 
         # Creates an action and objective normalizer
         self.normalize_observations = normalize_observations
-        self.action_normalizer = Normalizer(self.actions, defaults.action_spaces)
+        self.action_normalizer = Normalizer(self.actions, self.default_action_space)
         self.obj_normalizer = Normalizer(self.obj_names, scales_dict)
+
+        self.region_selector = RegionSelector(config_overview)
 
     def step(self, action):
         """
@@ -101,7 +107,53 @@ class STEDMultiObjectivesEnv(gym.Env):
 
         :param action: A `numpy.ndarray` of the action
         """
-        raise NotImplementedError
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire an image with the given parameters
+        sted_image, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+
+        # Reward is given by the objectives
+        reward, _, _ = self.preference_articulation.articulate(
+            [mo_objs]
+        )
+        reward = reward.item()
+
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        info = {
+            "action" : action,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+        }
+
+        # Build the observation space
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        state = self._update_datamap()
+        
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
+
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
+
 
     def reset(self, seed=None, options=None):
         """
@@ -110,10 +162,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         :returns : A `numpy.ndarray` of the molecules
         """
         super().reset(seed=seed)
-        # Updates the current bleach function
-        self.microscope = self.microscope_generator.generate_microscope(
-            fluo_params=self.bleach_sampler.sample()
-        )
+        
         self.current_step = 0
         self.episode_memory = {
             "actions" : [],
@@ -151,47 +200,33 @@ class STEDMultiObjectivesEnv(gym.Env):
             setattr(self, key, value)
 
     def _update_datamap(self):
-        self.synapse = self.synapse_generator(rotate=True)
-        self.datamap = self.microscope_generator.generate_datamap(
-            datamap = {
-                "whole_datamap" : self.synapse.frame,
-                "datamap_pixelsize" : self.microscope_generator.pixelsize
-            }
-        )
 
-        # Acquire confocal image which sets the current state
-        conf_params = self.microscope_generator.generate_params()
-        state, _, _ = self.microscope.get_signal_and_bleach(
-            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
-        )
+        # Sets the next regions to images
+        xoff, yoff = next(self.region_selector)
+        abberior.microscope.set_offsets(self.measurements["conf"], xoff, yoff)
+        abberior.microscope.set_offsets(self.measurements["sted"], xoff, yoff)        
+
+        state = self.microscope.acquire("conf")
+
         return state
 
     def _acquire(self, action):
 
         # Generates imaging parameters
-        sted_params = self.microscope_generator.generate_params(
-            imaging = {
-                name : action[self.actions.index(name)]
-                    if name in self.actions else getattr(defaults, name.upper())
-                    for name in ["pdt", "p_ex", "p_sted"]
-            }
-        )
-        conf_params = self.microscope_generator.generate_params()
+        sted_params = {
+            name : action[self.actions.index(name)]
+                for name in ["pdt", "p_ex", "p_sted"] 
+                if name in self.actions
+        }
 
         # Acquire confocal image
-        conf1, bleached, _ = self.microscope.get_signal_and_bleach(
-            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
-        )
+        conf1 = self.microscope.acquire("conf")
 
         # Acquire STED image
-        sted_image, bleached, _ = self.microscope.get_signal_and_bleach(
-            self.datamap, self.datamap.pixelsize, **sted_params, bleach=True
-        )
+        sted_image = self.microscope.acquire("sted", sted_params)
 
         # Acquire confocal image
-        conf2, bleached, _ = self.microscope.get_signal_and_bleach(
-            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
-        )
+        conf2 = self.microscope.acquire("conf")
 
         # foreground on confocal image
         fg_c = get_foreground(conf1)
@@ -203,7 +238,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         # remove STED foreground points not in confocal foreground, if any
         fg_s *= fg_c
 
-        return sted_image, bleached["base"][self.datamap.roi], conf1, conf2, fg_s, fg_c
+        return sted_image, conf1, conf2, fg_s, fg_c
 
     def close(self):
         return None
