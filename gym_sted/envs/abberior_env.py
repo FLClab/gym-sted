@@ -49,9 +49,9 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
 
         self.actions = actions
         self.default_action_space = {
-            "p_sted" : {"low" : 0., "high" : 50.},
-            "p_ex" : {"low" : 0., "high" : 10.},
-            "pdt" : {"low" : 1.0e-6, "high" : 30.0e-6},
+            "p_sted" : {"low" : 0., "high" : 75.},
+            "p_ex" : {"low" : 0., "high" : 15.},
+            "pdt" : {"low" : 1.0e-6, "high" : 60.0e-6},
         }
 
         self.action_space = spaces.Box(
@@ -149,7 +149,7 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
 
         state = self._update_datamap()
-        
+
         self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
@@ -162,7 +162,7 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         :returns : A `numpy.ndarray` of the molecules
         """
         super().reset(seed=seed)
-        
+
         self.current_step = 0
         self.episode_memory = {
             "actions" : [],
@@ -204,7 +204,7 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         # Sets the next regions to images
         xoff, yoff = next(self.region_selector)
         abberior.microscope.set_offsets(self.measurements["conf"], xoff, yoff)
-        abberior.microscope.set_offsets(self.measurements["sted"], xoff, yoff)        
+        abberior.microscope.set_offsets(self.measurements["sted"], xoff, yoff)
 
         state = self.microscope.acquire("conf")
 
@@ -215,7 +215,7 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         # Generates imaging parameters
         sted_params = {
             name : action[self.actions.index(name)]
-                for name in ["pdt", "p_ex", "p_sted"] 
+                for name in ["pdt", "p_ex", "p_sted"]
                 if name in self.actions
         }
 
@@ -239,6 +239,17 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         fg_s *= fg_c
 
         return sted_image, conf1, conf2, fg_s, fg_c
+
+    def get_state(self):
+        """
+        Returns a `dict` of the state of the `env`
+        """
+        state = {
+            "action_space" : self.default_action_space,
+            "scales_dict" : scales_dict,
+            "microscope-defaults" : self.microscope.config
+        }
+        return state
 
     def close(self):
         return None
