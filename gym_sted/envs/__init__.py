@@ -23,7 +23,8 @@ from gym_sted.envs.sequence_sted_env import (
     SequenceSTEDMultiObjectivesEnv
 )
 from gym_sted.envs.preference_sted_env import (
-    PreferenceSTEDMultiObjectivesEnv
+    PreferenceSTEDMultiObjectivesEnv,
+    PreferenceCountRateScaleSTEDMultiObjectivesEnv
 )
 from gym_sted.envs.abberior_env import (
     AbberiorSTEDMultiObjectivesEnv
