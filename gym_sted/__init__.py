@@ -1033,3 +1033,17 @@ register(
     # the agent can complete 1 action and start another one before the episode is over
     max_episode_steps=20,   # for now the pdt is 100us for a 64x64 dmap, will not go over 13 acqs
 )
+
+################################################
+# Abberior
+################################################
+
+register(
+    id="AbberiorMOSTED-v0",
+    entry_point="gym_sted.envs:AbberiorSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "max_episode_steps" : 30
+    },
+)

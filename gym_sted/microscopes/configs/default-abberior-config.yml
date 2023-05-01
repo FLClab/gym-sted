@@ -1,0 +1,18 @@
+laser_id:
+  exc: 5
+  sted: 6
+params_conf:
+  p_ex: 15.
+  p_sted: 0.
+  pdt: 10.0e-6
+params_sted:
+  p_ex: 10.
+  p_sted: 15.
+  pdt: 10.0e-6
+image_opts:
+  imagesize:
+    - 4.48e-6
+    - 4.48e-6
+  pixelsize:
+    - 2.0e-08
+    - 2.0e-08
