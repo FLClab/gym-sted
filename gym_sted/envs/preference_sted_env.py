@@ -51,7 +51,7 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         
         # Update observation space
         self.observation_space = spaces.Tuple((
-            spaces.Box(0, 2**16, shape=(128, 128, 3), dtype=numpy.uint16),
+            spaces.Box(0, 2**16, shape=(96, 96, 3), dtype=numpy.uint16),
             spaces.Box(
                 0, 1024, shape=(len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
                 dtype=numpy.float32
@@ -59,7 +59,7 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         ))        
 
         self.datamap_generator = DatamapGenerator(
-            molecules=40, molecules_scale=0.1, shape=(128, 128),
+            molecules=40, molecules_scale=0.1, shape=(96, 96),
             path=defaults.DATAMAP_PATH, augment=True
         )
 
