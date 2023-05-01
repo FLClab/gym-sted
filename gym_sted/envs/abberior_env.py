@@ -22,11 +22,6 @@ from gym_sted.microscopes.abberior import AbberiorMicroscope
 # Requires stedopt to be installed
 from stedopt.tools import RegionSelector
 
-# Sets the configuration
-config_overview = abberior.microscope.get_config("Setting overview configuration.")
-config_conf = abberior.microscope.get_config("Setting confocal configuration.")
-config_sted = abberior.microscope.get_config("Setting STED configuration.")
-
 class AbberiorSTEDMultiObjectivesEnv(gym.Env):
     """
     Creates a `AbberiorSTEDMultiObjectivesEnv`
@@ -46,6 +41,11 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
     def __init__(self, actions=["p_sted", "p_ex", "pdt"],
                     max_episode_steps=30,
                     normalize_observations=True):
+
+        # Sets the configuration
+        self.config_overview = abberior.microscope.get_config("Setting overview configuration.")
+        self.config_conf = abberior.microscope.get_config("Setting confocal configuration.")
+        self.config_sted = abberior.microscope.get_config("Setting STED configuration.")
 
         self.actions = actions
         self.default_action_space = {
@@ -79,8 +79,8 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         self.viewer = None
 
         self.measurements = {
-            "conf" : config_conf,
-            "sted" : config_sted
+            "conf" : self.config_conf,
+            "sted" : self.config_sted
         }
         self.microscope = AbberiorMicroscope(
             self.measurements
@@ -99,7 +99,7 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         self.action_normalizer = Normalizer(self.actions, self.default_action_space)
         self.obj_normalizer = Normalizer(self.obj_names, scales_dict)
 
-        self.region_selector = RegionSelector(config_overview)
+        self.region_selector = RegionSelector(self.config_overview)
 
     def step(self, action):
         """

@@ -4,6 +4,7 @@ import os
 import json
 import pickle
 import bz2
+import torch
 
 import gym_sted
 
@@ -44,7 +45,7 @@ class PreferenceArticulator:
         self.model.eval()
         self.config = json.load(open(os.path.join(model_path, "config.json"), "r"))
 
-    def articulate(self, thetas):
+    def articulate(self, thetas, use_sigmoid=False):
         """
         Articulates the decision from a list of possible choices
 
@@ -61,6 +62,9 @@ class PreferenceArticulator:
 
         # Predicts the objectives
         scores = self.model.predict(thetas)
+        if use_sigmoid:
+            scores = torch.sigmoid(torch.tensor(scores))
+            scores = scores.cpu().data.numpy()
 
         # Sorts the scores
         sorted_scores = numpy.argsort(scores.ravel())

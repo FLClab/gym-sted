@@ -43,7 +43,7 @@ FLUO = {
 
 action_spaces = {
     "p_sted" : {"low" : 0., "high" : 350.0e-3},
-    "p_ex" : {"low" : 0., "high" : 10.0e-6},
+    "p_ex" : {"low" : 0., "high" : 20.0e-6},
     "pdt" : {"low" : 1.0e-6, "high" : 100.0e-6},
 }
 
