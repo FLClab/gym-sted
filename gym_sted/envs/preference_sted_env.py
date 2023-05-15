@@ -106,6 +106,7 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
             "reward" : reward,
+            "sample" : self.group
         }
 
         # Build the observation space
@@ -135,6 +136,7 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.microscope = self.microscope_generator.generate_microscope(
             fluo_params=self.bleach_sampler.sample()
         )
+
         self.current_step = 0
         self.episode_memory = {
             "actions" : [],
@@ -200,60 +202,61 @@ class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectiv
 
     def step(self, action):
 
-            # Action is an array of size self.actions and main_action
-            # main action should be in the [0, 1, 2]
-            # We manually clip the actions which are out of action space
-            action = numpy.clip(action, self.action_space.low, self.action_space.high)
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
 
-            # Acquire an image with the given parameters
-            sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
-            mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+        # Acquire an image with the given parameters
+        sted_image, bleached, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
 
-            # Reward is given by the objectives
-            reward, _, _ = self.preference_articulation.articulate(
-                [mo_objs], use_sigmoid=False
-            )
-            reward = reward.item()
+        # Reward is given by the objectives
+        reward, _, _ = self.preference_articulation.articulate(
+            [mo_objs], use_sigmoid=False
+        )
+        reward = reward.item()
 
-            # Reward will be dependant on the count rate of the STED image
-            # We extract the pixel dwelltime used to acquire
-            sted_params = self.microscope_generator.generate_params(
-                imaging = {
-                    name : action[self.actions.index(name)]
-                        if name in self.actions else getattr(defaults, name.upper())
-                        for name in ["pdt", "p_ex", "p_sted"]
-                }
-            )
-            count_rate = sted_image.max() / sted_params["pdt"]
-            if count_rate > self.max_count_rate:
-                reward = self.negative_reward
-
-            # Updates memory
-            done = self.current_step >= self.spec.max_episode_steps - 1
-            self.current_step += 1
-            self.episode_memory["mo_objs"].append(mo_objs)
-            self.episode_memory["actions"].append(action)
-            self.episode_memory["reward"].append(reward)
-
-            info = {
-                "action" : action,
-                "bleached" : bleached,
-                "sted_image" : sted_image,
-                "conf1" : conf1,
-                "conf2" : conf2,
-                "fg_c" : fg_c,
-                "fg_s" : fg_s,
-                "mo_objs" : mo_objs,
-                "reward" : reward,
+        # Reward will be dependant on the count rate of the STED image
+        # We extract the pixel dwelltime used to acquire
+        sted_params = self.microscope_generator.generate_params(
+            imaging = {
+                name : action[self.actions.index(name)]
+                    if name in self.actions else getattr(defaults, name.upper())
+                    for name in ["pdt", "p_ex", "p_sted"]
             }
+        )
+        count_rate = sted_image.max() / sted_params["pdt"]
+        if count_rate > self.max_count_rate:
+            reward = self.negative_reward
 
-            # Build the observation space
-            obs = []
-            for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
-                obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
-                obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
-            obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
-            state = self._update_datamap()
-            self.state = numpy.stack((state, conf1, sted_image), axis=-1)
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
 
-            return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info        
+        info = {
+            "action" : action,
+            "bleached" : bleached,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+            "sample" : self.group
+        }
+
+        # Build the observation space
+        obs = []
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+        state = self._update_datamap()
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
+
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info        
