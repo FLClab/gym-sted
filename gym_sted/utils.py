@@ -279,6 +279,7 @@ class BleachSampler:
         else:
             self.criterions = criterions
         self.optimizer = FluorescenceOptimizer()
+        self.criterion = None
 
         self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
 
@@ -325,8 +326,8 @@ class BleachSampler:
         """
         fluo = defaults.FLUO.copy()
 
-        criterion = UniformCriterion(self.criterions)
-        optimized = self.optimizer.optimize(criterion)
+        self.criterion = UniformCriterion(self.criterions)
+        optimized = self.optimizer.optimize(self.criterion)
 
         for objective, params in optimized.items():
             for key, value in params.items():
