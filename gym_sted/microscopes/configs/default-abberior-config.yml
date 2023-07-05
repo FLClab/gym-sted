@@ -1,12 +1,16 @@
 laser_id:
-  exc: 5
-  sted: 6
+  exc: 4
+  sted: 5
 params_conf:
-  p_ex: 15.
+  p_ex: 5.
   p_sted: 0.
   pdt: 10.0e-6
+params_focus:
+  p_ex: 3.
+  p_sted: 0.
+  pdt: 5.0e-6
 params_sted:
-  p_ex: 10.
+  p_ex: 3.
   p_sted: 15.
   pdt: 10.0e-6
 image_opts:

@@ -46,11 +46,12 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         self.config_overview = abberior.microscope.get_config("Setting overview configuration.")
         self.config_conf = abberior.microscope.get_config("Setting confocal configuration.")
         self.config_sted = abberior.microscope.get_config("Setting STED configuration.")
+        self.config_focus = abberior.microscope.get_config("Setting FOCUS configuration.")
 
         self.actions = actions
         self.default_action_space = {
-            "p_sted" : {"low" : 0., "high" : 75.},
-            "p_ex" : {"low" : 0., "high" : 15.},
+            "p_sted" : {"low" : 0., "high" : 50.},
+            "p_ex" : {"low" : 0., "high" : 5.},
             "pdt" : {"low" : 1.0e-6, "high" : 60.0e-6},
         }
 
@@ -80,7 +81,8 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
 
         self.measurements = {
             "conf" : self.config_conf,
-            "sted" : self.config_sted
+            "sted" : self.config_sted,
+            "focus" : self.config_focus
         }
         self.microscope = AbberiorMicroscope(
             self.measurements
@@ -205,6 +207,9 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         xoff, yoff = next(self.region_selector)
         abberior.microscope.set_offsets(self.measurements["conf"], xoff, yoff)
         abberior.microscope.set_offsets(self.measurements["sted"], xoff, yoff)
+        abberior.microscope.set_offsets(self.measurements["focus"], xoff, yoff)
+
+        input("Now is a good time to move focus. Press enter when done.")
 
         state = self.microscope.acquire("conf")
 
