@@ -37,9 +37,11 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=30, scale_nanodomain_reward=1.,
-                    normalize_observations=True):
+                    normalize_observations=True, max_count_rate=20e+6):
 
         self.group = None
+        self.max_count_rate = max_count_rate
+        self.conf_params = None
 
         super(PreferenceSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
@@ -128,6 +130,8 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         """
         super().reset(seed=seed)
 
+        self.conf_params = None
+
         # Samples the current samply type 
         self.group = self.datamap_generator.sample_group()
         self.bleach_sampler.optimizer.set_correction_factor(self.group)
@@ -158,10 +162,21 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             }
         )
 
-        # Acquire confocal image which sets the current state
-        conf_params = self.microscope_generator.generate_params()
+        # Acquire confocal image which sets the current state and defines the confocal 
+        # parameters to avoid the saturation of detector
+        if isinstance(self.conf_params, type(None)):
+            conf_params = self.microscope_generator.generate_params()
+            state, _, _ = self.microscope.get_signal_and_bleach(
+                self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
+            )
+            while state.max() / conf_params["pdt"] > self.max_count_rate:
+                conf_params["p_ex"] *= 0.75
+                state, _, _ = self.microscope.get_signal_and_bleach(
+                    self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
+                )
+            self.conf_params = conf_params
         state, _, _ = self.microscope.get_signal_and_bleach(
-            self.datamap, self.datamap.pixelsize, **conf_params, bleach=False
+            self.datamap, self.datamap.pixelsize, **self.conf_params, bleach=False
         )
         return state
     
@@ -194,11 +209,20 @@ class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectiv
             actions = actions,
             max_episode_steps = max_episode_steps,
             scale_nanodomain_reward = scale_nanodomain_reward,
-            normalize_observations=normalize_observations
+            normalize_observations=normalize_observations,
+            max_count_rate=max_count_rate
         )
 
-        self.max_count_rate = max_count_rate
         self.negative_reward = negative_reward
+
+        # Update observation space
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(96, 96, 3), dtype=numpy.uint16),
+            spaces.Box(
+                0, 1, shape=(1 + len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
+                dtype=numpy.float32
+            ) # Articulation, shape is given by objectives, actions at each steps
+        ))                
 
     def step(self, action):
 
@@ -247,11 +271,13 @@ class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectiv
             "fg_s" : fg_s,
             "mo_objs" : mo_objs,
             "reward" : reward,
-            "sample" : self.group
+            "sample" : self.group,
+            "conf_params" : self.conf_params
         }
 
+        conf_params = self.microscope_generator.generate_params()
         # Build the observation space
-        obs = []
+        obs = [self.conf_params["p_ex"] / conf_params["p_ex"]]
         for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
             obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
