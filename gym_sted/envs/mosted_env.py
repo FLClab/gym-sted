@@ -35,7 +35,7 @@ class STEDMultiObjectivesEnv(gym.Env):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=10, scale_nanodomain_reward=1.,
-                    normalize_observations=True):
+                    normalize_observations=True, **kwargs):
 
         self.actions = actions
         self.action_space = spaces.Box(
@@ -88,7 +88,8 @@ class STEDMultiObjectivesEnv(gym.Env):
         )
 
         # Loads preference articulation model
-        self.preference_articulation = PreferenceArticulator()
+        articulation_opts = kwargs.get("articulation_opts", {})
+        self.preference_articulation = PreferenceArticulator(**articulation_opts)
 
         # Creates an action and objective normalizer
         self.normalize_observations = normalize_observations

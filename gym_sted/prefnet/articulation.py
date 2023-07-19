@@ -37,8 +37,9 @@ class PreferenceArticulator:
     """
     Creates a preference articulation model
     """
-    def __init__(self, nb_obj=3):
-        model_path = os.path.join(os.path.dirname(gym_sted.__file__), "prefnet", "2021-07-12-06-40-29_ResolutionBleachSNR")
+    def __init__(self, nb_obj=3, **kwargs):
+        model_name = kwargs.get("model_name", "2021-07-12-06-40-29_ResolutionBleachSNR")
+        model_path = os.path.join(os.path.dirname(gym_sted.__file__), "prefnet", model_name)
 
         self.model = PrefNet(nb_obj=nb_obj)
         self.model = self.model.loading(os.path.join(model_path, "weights.t7"))
