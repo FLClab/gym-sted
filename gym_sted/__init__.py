@@ -1072,3 +1072,13 @@ register(
         "max_episode_steps" : 30
     },
 )
+
+register(
+    id="AbberiorMOSTEDCountRate-v0",
+    entry_point="gym_sted.envs:AbberiorSTEDCountRateMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "max_episode_steps" : 30
+    },
+)

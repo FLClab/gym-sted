@@ -46,6 +46,11 @@ action_spaces = {
     "p_ex" : {"low" : 0., "high" : 20.0e-6},
     "pdt" : {"low" : 1.0e-6, "high" : 100.0e-6},
 }
+abberior_action_spaces = {
+    "p_sted" : {"low" : 0., "high" : 80.},
+    "p_ex" : {"low" : 0., "high" : 18.},
+    "pdt" : {"low" : 1.0e-6, "high" : 100.0e-6},
+}
 
 # Define the objectives and regressors here
 obj_dict = {
