@@ -26,7 +26,8 @@ from gym_sted.envs.sequence_sted_env import (
 )
 from gym_sted.envs.preference_sted_env import (
     PreferenceSTEDMultiObjectivesEnv,
-    PreferenceCountRateScaleSTEDMultiObjectivesEnv
+    PreferenceCountRateScaleSTEDMultiObjectivesEnv,
+    RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv
 )
 try:
     from gym_sted.envs.abberior_env import (

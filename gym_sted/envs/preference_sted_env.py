@@ -393,6 +393,7 @@ class RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMult
             *self.action_normalizer(self.episode_memory["actions"][-1]),
             *self.obj_normalizer(self.episode_memory["mo_objs"][-1])
         ]
+        obs = numpy.array(obs)
         
         state = self._update_datamap()
         self.state = numpy.stack((state, conf1, sted_image), axis=-1)

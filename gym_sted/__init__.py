@@ -543,6 +543,31 @@ register(
     },
 )
 
+register(
+    id="RecurrentPreferenceCountRateMOSTED-hard-v0",
+    entry_point="gym_sted.envs:RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="RecurrentPreferenceCountRateMOSTED-hard-v1",
+    entry_point="gym_sted.envs:RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30,
+        "articulation_opts" : {
+            "model_name" : "2023-07-14-14-23-36"
+        }
+    },
+)
+
 ############################################
 # CONTEXTUAL
 ############################################
