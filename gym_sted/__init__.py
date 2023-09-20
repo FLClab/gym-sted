@@ -529,6 +529,20 @@ register(
     },
 )
 
+register(
+    id="PreferenceCountRateMOSTED-hard-v1",
+    entry_point="gym_sted.envs:PreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30,
+        "articulation_opts" : {
+            "model_name" : "2023-07-14-14-23-36"
+        }
+    },
+)
+
 ############################################
 # CONTEXTUAL
 ############################################
@@ -1052,6 +1066,16 @@ register(
 register(
     id="AbberiorMOSTED-v0",
     entry_point="gym_sted.envs:AbberiorSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="AbberiorMOSTEDCountRate-v0",
+    entry_point="gym_sted.envs:AbberiorSTEDCountRateMultiObjectivesEnv",
     max_episode_steps=30,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],

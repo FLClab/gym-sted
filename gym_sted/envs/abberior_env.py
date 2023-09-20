@@ -49,11 +49,7 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         self.config_focus = abberior.microscope.get_config("Setting FOCUS configuration.")
 
         self.actions = actions
-        self.default_action_space = {
-            "p_sted" : {"low" : 0., "high" : 50.},
-            "p_ex" : {"low" : 0., "high" : 5.},
-            "pdt" : {"low" : 1.0e-6, "high" : 60.0e-6},
-        }
+        self.default_action_space = defaults.abberior_action_spaces.copy()
 
         self.action_space = spaces.Box(
             low=numpy.array([self.default_action_space[name]["low"] for name in self.actions]),
@@ -258,3 +254,110 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
 
     def close(self):
         return None
+
+class AbberiorSTEDCountRateMultiObjectivesEnv(AbberiorSTEDMultiObjectivesEnv):
+    """
+    Creates a `AbberiorSTEDMultiObjectivesEnv`
+
+    Action space
+        The action space corresponds to the imaging parameters
+
+    Observation space
+        The observation space is a tuple, where
+        1. The current confocal image
+        2. A vector containing the current articulation, the selected actions, the obtained objectives
+
+    """
+    metadata = {'render.modes': ['human']}
+    obj_names = ["Resolution", "Bleach", "SNR"]
+
+    def __init__(self, actions=["p_sted", "p_ex", "pdt"],
+                    max_episode_steps=30,
+                    normalize_observations=True,
+                    max_count_rate=20e+6, 
+                    negative_reward=-10):
+
+        # These are the parameters by default that would
+        # Have been used
+        self.conf_params = {
+            "p_ex" : 9,
+            "p_sted" : 0.,
+            "pdt" : 10e-6,
+        }
+
+        self.negative_reward = negative_reward
+        self.max_count_rate = max_count_rate
+
+        super().__init__(self, actions, max_episode_steps, normalize_observations)
+
+        self.observation_space = spaces.Tuple((
+            spaces.Box(0, 2**16, shape=(224, 224, 3), dtype=numpy.uint16),
+            spaces.Box(
+                0, 1, shape=(1 + len(self.obj_names) * max_episode_steps + len(self.actions) * max_episode_steps,),
+                dtype=numpy.float32
+            ) # Articulation, shape is given by objectives, actions at each steps
+        ))
+
+    def step(self, action):
+        """
+        Method that should be implemented in the object that inherited
+
+        :param action: A `numpy.ndarray` of the action
+        """
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        action = numpy.clip(action, self.action_space.low, self.action_space.high)
+
+        # Acquire an image with the given parameters
+        sted_image, conf1, conf2, fg_s, fg_c = self._acquire(action)
+        mo_objs = self.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+
+        # Reward is given by the objectives
+        reward, _, _ = self.preference_articulation.articulate(
+            [mo_objs], use_sigmod=False
+        )
+        reward = reward.item()
+
+        # Generates imaging parameters
+        sted_params = {
+            name : action[self.actions.index(name)]
+                for name in ["pdt", "p_ex", "p_sted"]
+                if name in self.actions
+        }
+        count_rate = sted_image.max() / sted_params["pdt"]
+        if count_rate > self.max_count_rate:
+            reward = self.negative_reward        
+
+        # Updates memory
+        done = self.current_step >= self.spec.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(action)
+        self.episode_memory["reward"].append(reward)
+
+        info = {
+            "action" : action,
+            "sted_image" : sted_image,
+            "conf1" : conf1,
+            "conf2" : conf2,
+            "fg_c" : fg_c,
+            "fg_s" : fg_s,
+            "mo_objs" : mo_objs,
+            "reward" : reward,
+        }
+
+        # Build the observation space
+        conf_params = self.microscope.config["params_conf"]
+        obs = [conf_params["p_ex"] / self.conf_params["p_ex"]]
+        for a, mo in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+            obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
+            obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
+        obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        state = self._update_datamap()
+
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
+
+        return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info

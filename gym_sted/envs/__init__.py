@@ -30,7 +30,8 @@ from gym_sted.envs.preference_sted_env import (
 )
 try:
     from gym_sted.envs.abberior_env import (
-        AbberiorSTEDMultiObjectivesEnv
+        AbberiorSTEDMultiObjectivesEnv,
+        AbberiorSTEDCountRateMultiObjectivesEnv
     )
 except ModuleNotFoundError as e:
     logging.warn(e)

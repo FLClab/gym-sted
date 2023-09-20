@@ -37,7 +37,8 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=30, scale_nanodomain_reward=1.,
-                    normalize_observations=True, max_count_rate=20e+6):
+                    normalize_observations=True, max_count_rate=20e+6,
+                    **kwargs):
 
         self.group = None
         self.max_count_rate = max_count_rate
@@ -48,7 +49,8 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             actions = actions,
             max_episode_steps = max_episode_steps,
             scale_nanodomain_reward = scale_nanodomain_reward,
-            normalize_observations=normalize_observations
+            normalize_observations=normalize_observations,
+            **kwargs
         )
         
         # Update observation space
@@ -202,7 +204,7 @@ class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectiv
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=30, scale_nanodomain_reward=1.,
                     normalize_observations=True, max_count_rate=20e+6,
-                    negative_reward=-10.):
+                    negative_reward=-10., **kwargs):
 
         super(PreferenceCountRateScaleSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
@@ -210,7 +212,8 @@ class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectiv
             max_episode_steps = max_episode_steps,
             scale_nanodomain_reward = scale_nanodomain_reward,
             normalize_observations=normalize_observations,
-            max_count_rate=max_count_rate
+            max_count_rate=max_count_rate,
+            **kwargs
         )
 
         self.negative_reward = negative_reward
