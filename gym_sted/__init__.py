@@ -530,6 +530,17 @@ register(
 )
 
 register(
+    id="PreferenceCountRateRewardEngMOSTED-hard-v0",
+    entry_point="gym_sted.envs:PreferenceCountRateScaleRewardEngSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
     id="PreferenceCountRateMOSTED-hard-v1",
     entry_point="gym_sted.envs:PreferenceCountRateScaleSTEDMultiObjectivesEnv",
     max_episode_steps=30,
