@@ -6,7 +6,7 @@ OpenAI gym implementation of the [pySTED simulation tool](https://github.com/FLC
 
 ### Gym
 
-We recommend using a `Python` environment.
+We recommend using a new `Python` environment.
 ```bash
 conda create -n gym-sted python=3.10
 conda activate gym-sted
@@ -18,7 +18,7 @@ pip install git+https://github.com/FLClab/pySTED
 pip install git+https://github.com/FLClab/metrics
 ```
 
-Then you can install `gym-sted`.
+Then you can install `gym-sted` once this repository has been cloned.
 ```bash
 pip install -e gym-sted
 ```
