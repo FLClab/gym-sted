@@ -270,7 +270,8 @@ class timedExpSTEDEnvDebug(gym.Env):
             # ~!* RETURN DLA SCRAP ICITTE *!~
             return [observation, objective_vals], reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None):
+        super().reset(seed=seed)
         self.microscope = self.microscope_generator.generate_microscope(
             phy_react=self.bleach_sampler.sample()
         )

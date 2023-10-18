@@ -138,15 +138,6 @@ class MultiplyRewardCalculator(RewardCalculator):
             for obj_name in self.objectives.keys()
         ]).item()
 
-    def rescale(self, value, obj_name):
-        """
-        Rescales the reward to be within approximately [0, 1] range
-
-        :param value: The value of the objective
-        :param obj_name: The name of the objective
-        """
-        return (value - self.scales[obj_name]["low"]) / (self.scales[obj_name]["high"] - self.scales[obj_name]["low"])
-
 class BoundedRewardCalculator(RewardCalculator):
     def __init__(self, objs, *args, **kwargs):
         """

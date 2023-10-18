@@ -11,23 +11,7 @@ from collections import OrderedDict
 from gym_sted import rewards, defaults
 from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground
 from gym_sted.rewards import objectives
-
-obj_dict = {
-    "SNR" : objectives.Signal_Ratio(75),
-    "Bleach" : objectives.Bleach(),
-    "Resolution" : objectives.Resolution(pixelsize=20e-9),
-    "Squirrel" : objectives.Squirrel()
-}
-bounds_dict = {
-    "SNR" : {"min" : 0.20, "max" : numpy.inf},
-    "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 100}
-}
-scales_dict = {
-    "SNR" : {"min" : 0, "max" : 1},
-    "Bleach" : {"min" : 0, "max" : 1},
-    "Resolution" : {"min" : 40, "max" : 180}
-}
+from gym_sted.defaults import obj_dict, bounds_dict, scales_dict
 
 class STEDEnv(gym.Env):
     """
@@ -68,8 +52,6 @@ class STEDEnv(gym.Env):
         self.datamap = None
         self.viewer = None
 
-        self.seed()
-
     def step(self, action):
 
         # We manually clip the actions which are out of action space
@@ -99,14 +81,15 @@ class STEDEnv(gym.Env):
         }
         self.current_step += 1
 
-        return (observation, numpy.array(mo_objs + action.tolist())), reward, done, info
+        return (observation, numpy.array(mo_objs + action.tolist())), reward, done, False, info
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         self.current_step = 0
         state = self._update_datamap()
         self.initial_count = self.datamap.whole_datamap.sum()
@@ -133,10 +116,6 @@ class STEDEnv(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():
@@ -241,8 +220,6 @@ class STEDEnvWithoutVision(gym.Env):
         self.datamap = None
         self.viewer = None
 
-        self.seed()
-
     def step(self, action):
 
         # We manually clip the actions which are out of action space
@@ -275,14 +252,15 @@ class STEDEnvWithoutVision(gym.Env):
 
         # action  = (action - defaults.action_spaces["p_sted"]["low"]) / (defaults.action_spaces["p_sted"]["high"] - defaults.action_spaces["p_sted"]["low"])
 
-        return numpy.array(mo_objs + action.tolist()), reward, done, info
+        return numpy.array(mo_objs + action.tolist()), reward, done, False, info
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         self.current_step = 0
         state = self._update_datamap()
         self.initial_count = self.datamap.whole_datamap.sum()
@@ -309,10 +287,6 @@ class STEDEnvWithoutVision(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():
@@ -427,14 +401,15 @@ class STEDEnvWithDelayedReward(STEDEnv):
         self.episode_memory.append(reward)
         reward = numpy.array(self.episode_memory)
 
-        return (observation, numpy.array(mo_objs + action.tolist())), reward, done, info
+        return (observation, numpy.array(mo_objs + action.tolist())), reward, done, False, info
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         self.current_step = 0
         self.episode_memory = []
         state = self._update_datamap()

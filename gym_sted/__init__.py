@@ -449,6 +449,138 @@ register(
 )
 
 ############################################
+# PREFERENCES
+############################################
+
+register(
+    id="PreferenceMOSTED-easy-hslb-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_low-bleach"
+        },
+        "max_episode_steps" : 30
+    }
+)
+
+register(
+    id="PreferenceMOSTED-easy-hshb-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_high-bleach"
+        },
+        "max_episode_steps" : 30        
+    }
+)
+
+register(
+    id="PreferenceMOSTED-easy-lslb-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_low-bleach"
+        },
+        "max_episode_steps" : 30        
+    }
+)
+
+register(
+    id="PreferenceMOSTED-easy-lshb-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_high-bleach"
+        },
+        "max_episode_steps" : 30        
+    }
+)
+
+register(
+    id="PreferenceMOSTED-hard-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="PreferenceCountRateMOSTED-hard-v0",
+    entry_point="gym_sted.envs:PreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="PreferenceCountRateRewardEngMOSTED-hard-v0",
+    entry_point="gym_sted.envs:PreferenceCountRateScaleRewardEngSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="PreferenceCountRateMOSTED-hard-v1",
+    entry_point="gym_sted.envs:PreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30,
+        "articulation_opts" : {
+            "model_name" : "2023-07-14-14-23-36"
+        }
+    },
+)
+
+register(
+    id="RecurrentPreferenceCountRateMOSTED-hard-v0",
+    entry_point="gym_sted.envs:RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="RecurrentPreferenceCountRateMOSTED-hard-v1",
+    entry_point="gym_sted.envs:RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30,
+        "articulation_opts" : {
+            "model_name" : "2023-07-14-14-23-36"
+        }
+    },
+)
+
+############################################
 # CONTEXTUAL
 ############################################
 
@@ -459,6 +591,62 @@ register(
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
         "bleach_sampling" : "constant",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTED-easy-hslb-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_low-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTED-easy-hshb-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_high-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTED-easy-lslb-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_low-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="ContextualMOSTED-easy-lshb-v0",
+    entry_point="gym_sted.envs:ContextualSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_high-bleach"
+        },
         "scale_nanodomain_reward" : 1.,
     }
 )
@@ -480,7 +668,7 @@ register(
     max_episode_steps=10,
     kwargs={
         "actions" : ["p_sted", "p_ex", "pdt"],
-        "bleach_sampling" : "normal",
+        "bleach_sampling" : "uniform",
         "scale_nanodomain_reward" : 1.,
     }
 )
@@ -624,6 +812,107 @@ register(
         "normalize_observations" : True
     }
 )
+
+################################################################################
+################################################################################
+# Sequence env
+################################################################################
+################################################################################
+
+register(
+    id="SequenceMOSTED-easy-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "constant",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="SequenceMOSTED-easy-hslb-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_low-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="SequenceMOSTED-easy-hshb-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_high-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="SequenceMOSTED-easy-lslb-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_low-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="SequenceMOSTED-easy-lshb-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_high-bleach"
+        },
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="SequenceMOSTED-mid-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "choice",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+register(
+    id="SequenceMOSTED-hard-v0",
+    entry_point="gym_sted.envs:SequenceSTEDMultiObjectivesEnv",
+    max_episode_steps=10,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "scale_nanodomain_reward" : 1.,
+    }
+)
+
+################################################################################
+################################################################################
+# Timed env
+################################################################################
+################################################################################
 
 # Debug env for Timed exp, everything is the same except that bleach is OFF (15/09/21)
 register(
@@ -836,4 +1125,28 @@ register(
     # for now the pdt is 100us for a 64x64 dmap, which means 409600 time steps per action, which means
     # the agent can complete 1 action and start another one before the episode is over
     max_episode_steps=20,   # for now the pdt is 100us for a 64x64 dmap, will not go over 13 acqs
+)
+
+################################################
+# Abberior
+################################################
+
+register(
+    id="AbberiorMOSTED-v0",
+    entry_point="gym_sted.envs:AbberiorSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="AbberiorMOSTEDCountRate-v0",
+    entry_point="gym_sted.envs:AbberiorSTEDCountRateMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "max_episode_steps" : 30
+    },
 )
