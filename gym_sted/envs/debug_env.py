@@ -10,34 +10,10 @@ from collections import OrderedDict
 
 import gym_sted
 from gym_sted import rewards, defaults
-from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler
+from gym_sted.utils import SynapseGenerator, MicroscopeGenerator, get_foreground, BleachSampler, Normalizer
 from gym_sted.rewards import objectives
-from gym_sted.prefnet import PreferenceArticulator
-
-obj_dict = {
-    "SNR" : objectives.Signal_Ratio(75),
-    "Bleach" : objectives.Bleach(),
-    "Resolution" : objectives.Resolution(pixelsize=20e-9),
-    "Squirrel" : objectives.Squirrel(),
-    "NbNanodomains" : objectives.NumberNanodomains()
-}
-bounds_dict = {
-    "SNR" : {"min" : 0.20, "max" : numpy.inf},
-    "Bleach" : {"min" : -numpy.inf, "max" : 0.5},
-    "Resolution" : {"min" : 0, "max" : 100},
-    "NbNanodomains" : {"min" : 0, "max" : numpy.inf}
-}
-scales_dict = {
-    "SNR" : {"min" : 0, "max" : 1},
-    "Bleach" : {"min" : 0, "max" : 1},
-    "Resolution" : {"min" : 40, "max" : 180},
-    "NbNanodomains" : {"min" : 0, "max" : 1}
-}
-action_spaces = {
-    "p_sted" : {"low" : 0., "high" : 5.0e-3},
-    "p_ex" : {"low" : 0.8e-6, "high" : 5.0e-6},
-    "pdt" : {"low" : 10.0e-6, "high" : 150.0e-6},
-}
+from gym_sted.prefnet import PreferenceArticulator, load_demonstrations
+from gym_sted.defaults import action_spaces, obj_dict, bounds_dict, scales_dict
 
 class DebugBleachSTEDEnv(gym.Env):
 
@@ -135,11 +111,12 @@ class DebugBleachSTEDEnv(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed):
         """
         Resets the environment with a new datamap
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         molecules_disposition = numpy.zeros((20, 20))
         molecules_disposition[5, 5] = 10
         self.datamap = self.microscope_generator.generate_datamap(
@@ -157,10 +134,6 @@ class DebugBleachSTEDEnv(gym.Env):
 
         self.initial_count = molecules_disposition.sum()
         return self.state[..., numpy.newaxis]
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     # def get_statistics(self):
     #     # return [("mean-action", [])]
@@ -268,11 +241,12 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         molecules_disposition = self.synapse_generator()
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
@@ -289,10 +263,6 @@ class DebugResolutionSNRSTEDEnv(gym.Env):
 
         self.initial_count = molecules_disposition.sum()
         return self.state[..., numpy.newaxis]
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def close(self):
         return None
@@ -400,11 +370,12 @@ class DebugBleachSTEDTimedEnv(gym.Env):
         # return something eventually :)
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
         :returns: A `TemporalDatmap` object containing the evolution of the datamap as the flash occurs
         """
+        super().reset(seed=seed)
         molecules_disposition = numpy.ones((20, 20)) * 5   # create a filled square dmap for debugging purpouses
         self.temporal_datamap = self.microscope_generator.generate_temporal_datamap(
             temporal_datamap = {
@@ -435,10 +406,6 @@ class DebugBleachSTEDTimedEnv(gym.Env):
 
         # that's it ? ... ???
         return self.state[numpy.newaxis, ...] / 1024.0   # normalize to ensure good NN learning
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def close(self):
         return None
@@ -632,12 +599,13 @@ class DebugRankSTEDRecurrentMultiObjectivesEnv(gym.Env):
 
         return (self.state, obs), reward, done, info
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Resets the environment with a new datamap
 
         :returns : A `numpy.ndarray` of the molecules
         """
+        super().reset(seed=seed)
         # Updates the current bleach function
         self.microscope = self.microscope_generator.generate_microscope(
             phy_react=self.bleach_sampler.sample()
@@ -676,10 +644,6 @@ class DebugRankSTEDRecurrentMultiObjectivesEnv(gym.Env):
         axes[2].set_title(f"Acquired signal (photons)")
 
         pyplot.show(block=True)
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def update_(self, **kwargs):
         for key, value in kwargs.items():

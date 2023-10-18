@@ -267,6 +267,7 @@ class timedExpSTEDEnv(gym.Env):
             return [observation, objective_vals], reward, done, info
 
     def reset(self, **kwargs):
+        super().reset(seed=kwargs.get("seed", None))
         self.microscope = self.microscope_generator.generate_microscope(
             phy_react=self.bleach_sampler.sample()
         )
@@ -623,6 +624,7 @@ class timedExpSTEDEnvBleach(gym.Env):
             return [observation, objective_vals], reward, done, info
 
     def reset(self, **kwargs):
+        super().reset(seed=kwargs.get("seed", None))
         self.microscope = self.microscope_generator.generate_microscope(
             phy_react=self.bleach_sampler.sample()
         )

@@ -2,8 +2,11 @@
 import numpy
 import random
 import warnings
+import os
+import json
 
 from skimage import filters
+from scipy import optimize
 
 from pysted import base, utils
 from pysted import exp_data_gen as dg
@@ -148,30 +151,28 @@ class MicroscopeGenerator():
     def generate_microscope(self, **kwargs):
 
         # Generating objects necessary for acquisition simulation
-        laser_ex = base.GaussianBeam(**self.laser_ex_params)
-        laser_sted = base.DonutBeam(**self.laser_sted_params)
-        detector = base.Detector(**self.detector_params)
-        objective = base.Objective(**self.objective_params)
-        if "phy_react" in kwargs:
-            tmp = self.fluo_params.copy()
-            tmp["phy_react"] = kwargs.get("phy_react")
-            fluo = base.Fluorescence(**tmp)
-        else:
-            fluo = base.Fluorescence(**self.fluo_params)
+        laser_ex = base.GaussianBeam(**kwargs.get("laser_ex_params", self.laser_ex_params))
+        laser_sted = base.DonutBeam(**kwargs.get("laser_sted_params", self.laser_sted_params))
+        detector = base.Detector(**kwargs.get("detector_params", self.detector_params))
+        objective = base.Objective(**kwargs.get("objective_params", self.objective_params))
+        fluo = base.Fluorescence(**kwargs.get("fluo_params", self.fluo_params))
 
-        self.microscope = base.Microscope(laser_ex, laser_sted, detector, objective, fluo)
-        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
+        self.microscope = base.Microscope(laser_ex, laser_sted, detector, objective, fluo, load_cache=True)
+        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=False)
 
         return self.microscope
 
     def generate_datamap(self, **kwargs):
+        """
+        Generates the `datamap` object
+        """
 
         datamap_params = kwargs.get("datamap", {
             "whole_datamap" : self.molecules_disposition,
             "datamap_pixelsize" : self.pixelsize
         })
 
-        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=True)
+        i_ex, _, _ = self.microscope.cache(self.pixelsize, save_cache=False)
         datamap = base.Datamap(**datamap_params)
         datamap.set_roi(i_ex, "max")
 
@@ -261,24 +262,40 @@ class BleachSampler:
 
     :param mode: The sampling mode from {constant, uniform, choice}
     """
-    def __init__(self, mode, value=None, seed=None, fluo=defaults.FLUO):
+    def __init__(self, mode, value=None, routine=None, seed=None, criterions=None):
         self.seed(seed)
         self.mode = mode
         self.value = value
-        self.fluo = fluo
-        self.uniform_limits = [
-            (0.001e-5, 0.015e-5), # p_ex
-            (0.004e-8, 0.012e-8) # p_sted
-        ]
-        self.normal_limits = [
-            (0.008e-5, 0.007e-5 / 2.576), # p_ex
-            (0.008e-8, 0.004e-8 / 2.576) # p_sted
-        ]
-        self.choices = [
-            (0.008e-5 - 0.007e-5, 0.008e-5, 0.008e-5 + 0.007e-5), # p_ex
-            (0.008e-8 - 0.004e-8, 0.008e-8, 0.008e-8 + 0.004e-8) # p_sted
-        ]
+        self.routine = routine
+
+        if isinstance(self.routine, str):
+            self.value = self.load_routine(
+                os.path.join(os.path.dirname(__file__), "routines", "routines.json"),
+                self.routine
+            )
+
+        if isinstance(criterions, type(None)):
+            self.criterions = defaults.fluorescence_criterions
+        else:
+            self.criterions = criterions
+        self.optimizer = FluorescenceOptimizer()
+        self.criterion = None
+
         self.sampling_method = getattr(self, "_{}_sample".format(self.mode))
+
+    def load_routine(self, file, routine_id):
+        """
+        Loads the required routine
+        """
+        data = json.load(open(file, "r"))
+        routine = data[routine_id]
+        # Some key requires specfic type
+        for sigma in ["sigma_abs", "sigma_ste"]:
+            tmp = {}
+            for key, value in routine[sigma].items():
+                tmp[int(key)] = value
+            routine[sigma] = tmp
+        return routine
 
     def seed(self, seed=None):
         """
@@ -291,7 +308,7 @@ class BleachSampler:
         """
         Implements the sample method
 
-        :returns : A `dict` of `phy_react`
+        :returns : A `dict` of fluorescent parameters
         """
         return self.sampling_method()
 
@@ -301,39 +318,46 @@ class BleachSampler:
         """
         if self.value:
             return self.value
-        return self.fluo["phy_react"]
+        return defaults.FLUO
 
     def _uniform_sample(self):
         """
         Implements a uniform sampling of the bleach parameters
         """
-        tmp = defaults.FLUO["phy_react"].copy()
-        for key, (m, M) in zip(tmp.keys(), self.uniform_limits):
-            tmp[key] = random.uniform(m, M)
-        return tmp
+        fluo = defaults.FLUO.copy()
 
-    def _normal_sample(self):
-        """
-        Implements a normal sampling of the bleach parameters
-        """
-        # là live il utilise 25e-11 comme moyenne et 100e-11 comme std, mais on
-        # veut que ces chiffres là soient nos limites, donc je dois modif le code :)
-        tmp = defaults.FLUO["phy_react"].copy()
-        for key, (mu, std) in zip(tmp.keys(), self.normal_limits):
-            tmp[key] = random.gauss(mu, std)
-            if tmp[key] < 0:
-                while tmp[key] < 0:
-                    tmp[key] = random.gauss(mu, std)
-        return tmp
+        self.criterion = UniformCriterion(self.criterions)
+        optimized = self.optimizer.optimize(self.criterion)
+
+        for objective, params in optimized.items():
+            for key, value in params.items():
+                fluo[key] = value
+        return fluo
+
+    # def _normal_sample(self):
+    #     """
+    #     Implements a normal sampling of the bleach parameters
+    #     """
+    #     fluo = defaults.FLUO.copy()
+    #     for key, (mu, std) in self.normal_limits.items():
+    #         fluo[key] = random.gauss(mu, std)
+    #         while fluo[key] < 0:
+    #             fluo[key] = random.gauss(mu, std)
+    #     return fluo
 
     def _choice_sample(self):
         """
         Implements a choice sampling of the bleach parameters
         """
-        tmp = defaults.FLUO["phy_react"].copy()
-        for key, choices in zip(tmp.keys(), self.choices):
-            tmp[key] = random.choice(choices)
-        return tmp
+        fluo = defaults.FLUO.copy()
+
+        criterion = ChoiceCriterion(self.criterions)
+        optimized = self.optimizer.optimize(criterion)
+
+        for objective, params in optimized.items():
+            for key, value in params.items():
+                fluo[key] = value
+        return fluo
 
 class RecordingQueue:
     def __init__(self, object: object, maxlen: int, num_sensors: tuple):
@@ -398,3 +422,328 @@ class Normalizer:
         if isinstance(x, (list, tuple)):
             x = numpy.array(x)
         return numpy.array([(_x - self.scales[name]["low"]) / (self.scales[name]["high"] - self.scales[name]["low"]) for name, _x in zip(self.names, x)])
+
+class FluorescenceOptimizer():
+    """
+    Optimizes the parameters of fluorescence to obtain the
+    given photobleaching and signal in the acquired images.
+    """
+    FACTORS = {
+        "synthetic" : 1.0,
+        "clusters" : 2.25, # CaMKII & PSD95
+        "camkii" : 2.25,
+        "psd95" : 2.25,
+        "PSD95-Bassoon" : 2.25,
+        "actin" : 3.0,
+        "tubulin" : 3.75,
+        "lifeact" : 3.75
+    }
+
+    def __init__(self, microscope=None, sample="clusters", iterations=25, pixelsize=20e-9):
+        """
+        Instantiates the `FluorescenceOptimizer`
+
+        :param microscope: A `pysted.base.Microscope` object
+        :param sample: A `str` of the sample type that is being optimized
+        :param iterations: An `int` of the number of iterations to perform
+        """
+        self.microscope = microscope
+        if isinstance(self.microscope, type(None)):
+            self.microscope = MicroscopeGenerator().generate_microscope()
+        self.iterations = iterations
+        self.pixelsize = pixelsize
+
+        assert sample in self.FACTORS.keys()
+        self.correction_factor = self.FACTORS[sample]
+        self.scale_factor = 40.
+
+        # This seems to be optimal for a starting point
+        self.microscope.fluo.sigma_abs = defaults.FLUO["sigma_abs"]
+        self.microscope.fluo.k1 = defaults.FLUO["k1"]
+        self.microscope.fluo.b = defaults.FLUO["b"]
+
+    def set_correction_factor(self, sample):
+        assert sample in self.FACTORS.keys()
+        self.correction_factor = self.FACTORS[sample]
+
+    def default_parameters(self):
+        """
+        Returns the default parameters
+        """
+        self.microscope.fluo.sigma_abs = defaults.FLUO["sigma_abs"]
+        self.microscope.fluo.k1 = defaults.FLUO["k1"]
+        self.microscope.fluo.b = defaults.FLUO["b"]
+        return defaults.FLUO["k1"], defaults.FLUO["b"], defaults.FLUO["sigma_abs"]
+
+    def aggregate(self, criterions, **kwargs):
+        """
+        Aggregates the returned values
+        """
+        out = {}
+        if "bleach" in criterions:
+            out["bleach"] = {
+                "k1" : kwargs.get("k1") * 1e-15,
+                "b" : kwargs.get("b")
+            }
+        if "signal" in criterions:
+            sigma_abs = self.microscope.fluo.sigma_abs
+            out["signal"] = {
+                "sigma_abs" : {
+                    int(self.microscope.excitation.lambda_ * 1e9) : kwargs.get("sigma_abs") * 1e-20,
+                    int(self.microscope.sted.lambda_ * 1e9) : sigma_abs[int(self.microscope.sted.lambda_ * 1e9)]
+                }
+            }
+        return out
+
+    def optimize(self, criterions):
+        """
+        Optimizes the fluorescene parameters given the input criterions
+        that have to be met. The optimization of the parameters is done
+        sequentially has this seems to produce decent results on the datamaps
+        that were tested. However, a multi-objective approach (e.g. NSGA-II)
+        could be better suited to find the Pareto choices.
+
+        :param criterions: A `dict` of criterions
+
+        :returns : A `dict` of the optimized parameters
+
+        :example :
+
+        criterions = {
+            "bleach" : {
+                "p_ex" : <VALUE>,
+                "p_sted" : <VALUE>,
+                "pdt" : <VALUE>,
+                "target" : <VALUE>
+            },
+            "signal" : {
+                "p_ex" : <VALUE>,
+                "p_sted" : <VALUE>,
+                "pdt" : <VALUE>,
+                "target" : <VALUE>
+            },
+        }
+        params = optimizer.optimize(criterions)
+        >>> params
+        {
+            "bleach" : {
+                "k1" : <VALUE>,
+                "b" : <VALUE>
+            },
+            "signal" : {
+                "sigma_abs" : {
+                    635 : <VALUE>,
+                    750 : <VALUE>
+                }
+            }
+        }
+        """
+        k1, b, sigma_abs = self.default_parameters()
+        sigma_abs = sigma_abs[int(self.microscope.excitation.lambda_ * 1e9)]
+
+        # Rescales values
+        k1 = k1 * 1e+15
+        sigma_abs = sigma_abs * 1e+20
+        for i in range(self.iterations):
+
+            # Optimize signal constant
+            params = criterions.get("signal", None)
+            if params:
+                # Slowly moving towards target
+                current = self.expected_confocal_signal(params["p_ex"], params["p_sted"], params["pdt"])
+                weighted_target = current + (i + 1) / self.iterations * (params["target"] - current)
+                res = optimize.minimize(
+                    self.optimize_sigma_abs, x0=[sigma_abs],
+                    args=(params["p_ex"], params["p_sted"], params["pdt"], weighted_target),
+                    options={"eps" : 0.01, "maxiter": 25}, tol=1e-3,
+                    bounds = [(0., numpy.inf)]
+                )
+                sigma_abs = res.x.item()
+
+            params = criterions.get("bleach", None)
+            if params:
+                # Slowly moving towards target
+                current = self.expected_bleach(params["p_ex"], params["p_sted"], params["pdt"])
+                weighted_target = current + (i + 1) / self.iterations * (params["target"] - current)
+
+                # Optimize bleaching constants
+                res = optimize.minimize(
+                    self.optimize_bleach, x0=[k1, b],
+                    args=(params["p_ex"], params["p_sted"], params["pdt"], weighted_target),
+                    options={"eps" : 0.01, "maxiter": 25}, tol=1e-3,
+                    bounds = [(0., numpy.inf), (0., 5.0)]
+                )
+                k1, b = res.x
+
+        return self.aggregate(criterions, k1=k1, b=b, sigma_abs=sigma_abs)
+
+    def kb_map_to_im_bleach(self, kb_map, dwelltime, linestep):
+        """
+        Bleaching estimate for an infinite number of fluorophores
+        kb_map being the map of k_bleach convolving each pixel
+        """
+        return 1 - numpy.exp((-kb_map * dwelltime * linestep).sum())
+
+    def expected_bleach(self, p_ex, p_sted, pdt):
+        """
+        Calculates the expected confocal signal given some parameters
+
+        :param p_ex: A `float` of the excitation power
+        :param p_sted: A `float` of the STED power
+        :param pdt: A `float` of the pixel dwelltime
+
+        :returns : A `int` of the expected number of photons
+        """
+        __i_ex, __i_sted, psf_det = self.microscope.cache(self.pixelsize)
+
+        i_ex = __i_ex * p_ex #the time averaged excitation intensity
+        i_sted = __i_sted * p_sted #the instant sted intensity (instant p_sted = p_sted/(self.sted.tau * self.sted.rate))
+
+        lambda_ex, lambda_sted = self.microscope.excitation.lambda_, self.microscope.sted.lambda_
+        tau_sted = self.microscope.sted.tau
+        tau_rep = 1 / self.microscope.sted.rate
+        phi_ex =  self.microscope.fluo.get_photons(i_ex, lambda_=lambda_ex)
+        phi_sted = self.microscope.fluo.get_photons(i_sted, lambda_=lambda_sted)
+
+        kb_map = self.microscope.fluo.get_k_bleach(
+            lambda_ex, lambda_sted, phi_ex, phi_sted*tau_sted/tau_rep, tau_sted,
+            tau_rep, pdt
+        )
+        bleach = self.kb_map_to_im_bleach(kb_map, pdt, 1)
+        return bleach
+
+    def expected_confocal_signal(self, p_ex, p_sted, pdt):
+        """
+        Calculates the expected confocal signal given some parameters
+
+        :param p_ex: A `float` of the excitation power
+        :param p_sted: A `float` of the STED power
+        :param pdt: A `float` of the pixel dwelltime
+
+        :returns : A `int` of the expected number of photons
+        """
+        photons_mean = []
+        # The calculation is repeated since there is randomness
+        effective = self.microscope.get_effective(self.pixelsize, p_ex, p_sted)
+        datamap = numpy.zeros_like(effective)
+        cy, cx = (s // 2 for s in datamap.shape)
+        datamap[cy, cx] = 1
+        datamap = filters.gaussian(datamap, sigma=self.correction_factor)
+        datamap = datamap / datamap.max() * self.scale_factor
+
+        intensity = numpy.sum(effective * datamap)
+        photons = self.microscope.fluo.get_photons(intensity)
+
+        for _ in range(25):
+            p = self.microscope.detector.get_signal(photons, pdt, self.microscope.sted.rate)
+            photons_mean.append(p)
+
+        photons = numpy.mean(photons_mean)
+        return photons
+
+    def optimize_bleach(self, x, p_ex, p_sted, pdt, target):
+        """
+        Method used by `scipy.optimize.minimize` to optimize the
+        photobleaching
+        """
+        k1, b = x
+        self.microscope.fluo.k1 = k1 * 1e-15
+        self.microscope.fluo.b = b
+        bleach = self.expected_bleach(p_ex, p_sted, pdt)
+        error = (target - bleach) ** 2
+        return error
+
+    def optimize_sigma_abs(self, sigma_abs, p_ex, p_sted, pdt, target):
+        """
+        Method used by `scipy.optimize.minimize` to optimize the
+        signal.
+
+        Note. The error signal is normalized by the target to obtain
+        reasonable error value during the optimization.
+        """
+        self.microscope.fluo.sigma_abs = {
+            int(self.microscope.excitation.lambda_ * 1e9) : sigma_abs * 1e-20,
+            int(self.microscope.sted.lambda_ * 1e9): self.microscope.fluo.sigma_abs[int(self.microscope.sted.lambda_ * 1e9)],
+        }
+
+        signal = self.expected_confocal_signal(p_ex, 0., pdt)
+        error = ((target - signal) / target) ** 2
+
+        return error
+
+class Criterion:
+    """
+    Implements a `Criterion` that can be used to optimize the parameters of
+    fluorescence
+    """
+    def __init__(self, criterions):
+        """
+        Instantiates the `Criterion`
+
+        :param criterions: A `dict` of criterions
+        """
+        self.criterions = criterions
+
+    def get(self, item, default=None):
+        if item not in self.criterions:
+            return default
+        return self.criterions[item]
+
+    def __contains__(self, item):
+        return item in self.criterions
+
+    def __str__(self):
+        return str(self.criterions)
+
+class ChoiceCriterion(Criterion):
+    """
+    Implements a `RandomCriterion` that can be used to optimize the parameters of
+    fluorescence. This criterion allows to randomly sample from a range of
+    parameters.
+    """
+    def __init__(self, criterions):
+        super().__init__(criterions)
+        self.criterions = {
+            key : self.sample(value) for key, value in self.criterions.items()
+        }
+
+    def sample(self, criterion):
+        """
+        Samples from the given criterions
+
+        :param criterion: A `dict` parameters and values to sample from
+        """
+        criterion = criterion.copy()
+        for key, values in criterion.items():
+            if isinstance(values, (tuple, list)):
+                possible = numpy.linspace(*values, 5)
+                criterion[key] = random.choice(possible).item()
+            else:
+                criterion[key] = values
+        return criterion
+
+class UniformCriterion(Criterion):
+    """
+    Implements a `RandomCriterion` that can be used to optimize the parameters of
+    fluorescence. This criterion allows to randomly sample from a range of
+    parameters.
+    """
+    def __init__(self, criterions):
+        super().__init__(criterions)
+        self.criterions = {
+            key : self.sample(value) for key, value in self.criterions.items()
+        }
+
+    def sample(self, criterion):
+        """
+        Samples from the given criterions
+
+        :param criterion: A `dict` parameters and values to sample from
+        """
+        criterion = criterion.copy()
+        for key, values in criterion.items():
+            if isinstance(values, (tuple, list)):
+                criterion[key] = random.uniform(*values)
+            else:
+                criterion[key] = values
+        return criterion
