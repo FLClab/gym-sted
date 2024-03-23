@@ -13,7 +13,7 @@ setup(
         "numpy",
         "scipy",
         "matplotlib",
-        "pysted @ git+https://github.com/FLClab/pySTED.git",
+        "pysted",
         "torch"
     ]  # And any other dependencies foo needs
 )

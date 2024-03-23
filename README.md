@@ -14,7 +14,7 @@ conda activate gym-sted
 
 This requires to install `pysted` and `metrics`
 ```bash
-pip install git+https://github.com/FLClab/pySTED
+pip install pysted
 pip install git+https://github.com/FLClab/metrics
 ```
 
