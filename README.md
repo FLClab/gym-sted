@@ -29,11 +29,23 @@ Many environments are available in `gym-sted`. The user may choose the environme
 
 *Note. The environements that are not described below are in an experimental state. No guarantees are provided for these.*
 
+### `ContextualMOSTED-easy-v0`
+
+This environment is designed to train a model that can handle a specific fluorophore. The task of this environment is to detect nanoclusters in simulated spines. The reward of the agent corresponds to the F1 score of the acquisition.
+
+This experiment was used in Turcotte et al. (2021).
+
+### `MOSTEDRankingWithExpertDemonstrationsF1Score-easy-v0`
+
+This environment is designed to train a model that can handle a specific fluorophore. The task of this environment is to detect nanoclusters in simulated spines. The reward of the agent corresponds to the ranking of the measured F1 score compared to a bank of expert demonstrations. While the F1 score is used to train the model, the agent only sees the reward as a ranking which is closer to real experimental condition.
+
+This experiment was used in Turcotte et al. (2021).
+
 ### `ContexutalMOSTED-<easy/hard>-<condition>-v0`
 
 These environments are designed to train a model that can handle a specific fluorophore in the `easy` mode or a range of fluorophore `hard`. The user may choose the fluorophore by setting the `<condition>`. The condition is only required when `easy` mode is selected. The conditions are: `hslb`, `hshb`, `lslb`, `lshb`.
 
-The task of this environment is to detect nanoclusters in simulated spines.
+The task of this environment is to detect nanoclusters in simulated spines. The reward of the agent corresponds to the F1 score of the acquisition.
 
 ### `PreferenceCountRateMOSTED-hard-v0`
 
