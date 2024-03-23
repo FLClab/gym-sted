@@ -66,9 +66,6 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["actions"].append(action)
         self.episode_memory["reward"].append(reward)
 
-        state = self._update_datamap()
-        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
-
         info = {
             "action" : action,
             "bleached" : bleached,
@@ -89,6 +86,9 @@ class ContextualSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        state = self._update_datamap()
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
 
@@ -146,9 +146,6 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         self.episode_memory["actions"].append(action)
         self.episode_memory["reward"].append(reward)
 
-        state = self._update_datamap()
-        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
-
         info = {
             "action" : action,
             "bleached" : bleached,
@@ -169,5 +166,8 @@ class ContextualRankingSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
             obs.extend(self.action_normalizer(a) if self.normalize_observations else a)
             obs.extend(self.obj_normalizer(mo) if self.normalize_observations else mo)
         obs = numpy.pad(numpy.array(obs), (0, self.observation_space[1].shape[0] - len(obs)))
+
+        state = self._update_datamap()
+        self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
