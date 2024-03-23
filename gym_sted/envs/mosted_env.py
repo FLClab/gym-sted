@@ -3,6 +3,7 @@ import gym
 import numpy
 import random
 import os
+import time
 
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -34,15 +35,14 @@ class STEDMultiObjectivesEnv(gym.Env):
 
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=10, scale_nanodomain_reward=1.,
-                    normalize_observations=False):
+                    normalize_observations=True, **kwargs):
 
         self.actions = actions
         self.action_space = spaces.Box(
-            low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions]),
-            high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions]),
+            low=numpy.array([defaults.action_spaces[name]["low"] for name in self.actions], dtype=numpy.float32),
+            high=numpy.array([defaults.action_spaces[name]["high"] for name in self.actions], dtype=numpy.float32),
             dtype=numpy.float32
         )
-
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2**16, shape=(64, 64, 3), dtype=numpy.uint16),
             spaces.Box(
@@ -88,7 +88,8 @@ class STEDMultiObjectivesEnv(gym.Env):
         )
 
         # Loads preference articulation model
-        self.preference_articulation = PreferenceArticulator()
+        articulation_opts = kwargs.get("articulation_opts", {})
+        self.preference_articulation = PreferenceArticulator(**articulation_opts)
 
         # Creates an action and objective normalizer
         self.normalize_observations = normalize_observations

@@ -4,6 +4,7 @@ import os
 import json
 import pickle
 import bz2
+import torch
 
 import gym_sted
 
@@ -36,15 +37,16 @@ class PreferenceArticulator:
     """
     Creates a preference articulation model
     """
-    def __init__(self, nb_obj=3):
-        model_path = os.path.join(os.path.dirname(gym_sted.__file__), "prefnet", "2021-07-12-06-40-29_ResolutionBleachSNR")
+    def __init__(self, nb_obj=3, **kwargs):
+        model_name = kwargs.get("model_name", "2021-07-12-06-40-29_ResolutionBleachSNR")
+        model_path = os.path.join(os.path.dirname(gym_sted.__file__), "prefnet", model_name)
 
         self.model = PrefNet(nb_obj=nb_obj)
         self.model = self.model.loading(os.path.join(model_path, "weights.t7"))
         self.model.eval()
         self.config = json.load(open(os.path.join(model_path, "config.json"), "r"))
 
-    def articulate(self, thetas):
+    def articulate(self, thetas, use_sigmoid=False):
         """
         Articulates the decision from a list of possible choices
 
@@ -61,7 +63,10 @@ class PreferenceArticulator:
 
         # Predicts the objectives
         scores = self.model.predict(thetas)
+        if use_sigmoid:
+            scores = torch.sigmoid(torch.tensor(scores))
+            scores = scores.cpu().data.numpy()
 
         # Sorts the scores
         sorted_scores = numpy.argsort(scores.ravel())
-        return sorted_scores[-1], sorted_scores
+        return scores, sorted_scores[-1], sorted_scores

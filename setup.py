@@ -1,9 +1,11 @@
 
+import setuptools
 from setuptools import setup
 
 setup(
     name='gym_sted',
     version='0.0.1',
+    packages=setuptools.find_packages(where="."),
     install_requires=[
         "gym>=0.26",
         "scikit-learn",
@@ -11,7 +13,7 @@ setup(
         "numpy",
         "scipy",
         "matplotlib",
-        "pysted @ git+https://github.com/FLClab/pySTED.git",
+        "pysted",
         "torch"
     ]  # And any other dependencies foo needs
 )

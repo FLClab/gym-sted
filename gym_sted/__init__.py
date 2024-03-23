@@ -1,5 +1,6 @@
 
 from gym.envs.registration import registry, register, make, spec
+from gym_sted import defaults
 
 # Control environment
 register(
@@ -445,6 +446,138 @@ register(
         "scale_nanodomain_reward" : 1.,
         "normalize_observations" : True,
     }
+)
+
+############################################
+# PREFERENCES
+############################################
+
+register(
+    id="PreferenceMOSTED-easy-hslb-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_low-bleach"
+        },
+        "max_episode_steps" : 30
+    }
+)
+
+register(
+    id="PreferenceMOSTED-easy-hshb-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "high-signal_high-bleach"
+        },
+        "max_episode_steps" : 30        
+    }
+)
+
+register(
+    id="PreferenceMOSTED-easy-lslb-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_low-bleach"
+        },
+        "max_episode_steps" : 30        
+    }
+)
+
+register(
+    id="PreferenceMOSTED-easy-lshb-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : {
+            "mode" : "constant",
+            "routine" : "low-signal_high-bleach"
+        },
+        "max_episode_steps" : 30        
+    }
+)
+
+register(
+    id="PreferenceMOSTED-hard-v0",
+    entry_point="gym_sted.envs:PreferenceSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="PreferenceCountRateMOSTED-hard-v0",
+    entry_point="gym_sted.envs:PreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="PreferenceCountRateRewardEngMOSTED-hard-v0",
+    entry_point="gym_sted.envs:PreferenceCountRateScaleRewardEngSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="PreferenceCountRateMOSTED-hard-v1",
+    entry_point="gym_sted.envs:PreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30,
+        "articulation_opts" : {
+            "model_name" : "2023-07-14-14-23-36"
+        }
+    },
+)
+
+register(
+    id="RecurrentPreferenceCountRateMOSTED-hard-v0",
+    entry_point="gym_sted.envs:RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="RecurrentPreferenceCountRateMOSTED-hard-v1",
+    entry_point="gym_sted.envs:RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "bleach_sampling" : "uniform",
+        "max_episode_steps" : 30,
+        "articulation_opts" : {
+            "model_name" : "2023-07-14-14-23-36"
+        }
+    },
 )
 
 ############################################
@@ -927,6 +1060,37 @@ register(
     }
 )
 
+###################
+# timed envs where the number of molecules is boosted and fluo params are modified to allow for more consecutive acqs
+###################
+register(
+    id="STEDtimed-exp-easy-x10-v0",
+    entry_point="gym_sted.envs:timedExpSTEDEnv",
+    max_episode_steps=50,   # for exp_time_us=2000000 the max number of steps is 48, set to 50 in case
+    kwargs={
+        "reward_calculator": "NanodomainsRewardCalculator",
+        "actions": ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "constant",
+        "flash_mode": "exp",
+        "fluo": defaults.FLUO_x10,
+        "n_molecs_mult": 10
+    }
+)
+
+register(
+    id="STEDtimed-exp-easy-x100-v0",
+    entry_point="gym_sted.envs:timedExpSTEDEnv",
+    max_episode_steps=50,   # for exp_time_us=2000000 the max number of steps is 48, set to 50 in case
+    kwargs={
+        "reward_calculator": "NanodomainsRewardCalculator",
+        "actions": ["pdt", "p_ex", "p_sted"],
+        "bleach_sampling": "constant",
+        "flash_mode": "exp",
+        "fluo": defaults.FLUO_x100,
+        "n_molecs_mult": 100
+    }
+)
+
 # Debug environment
 register(
     id="STEDdebugResolutionSNR-v0",
@@ -961,4 +1125,28 @@ register(
     # for now the pdt is 100us for a 64x64 dmap, which means 409600 time steps per action, which means
     # the agent can complete 1 action and start another one before the episode is over
     max_episode_steps=20,   # for now the pdt is 100us for a 64x64 dmap, will not go over 13 acqs
+)
+
+################################################
+# Abberior
+################################################
+
+register(
+    id="AbberiorMOSTED-v0",
+    entry_point="gym_sted.envs:AbberiorSTEDMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "max_episode_steps" : 30
+    },
+)
+
+register(
+    id="AbberiorMOSTEDCountRate-v0",
+    entry_point="gym_sted.envs:AbberiorSTEDCountRateMultiObjectivesEnv",
+    max_episode_steps=30,
+    kwargs={
+        "actions" : ["p_sted", "p_ex", "pdt"],
+        "max_episode_steps" : 30
+    },
 )
