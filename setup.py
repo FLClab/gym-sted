@@ -14,6 +14,7 @@ setup(
         "scipy",
         "matplotlib",
         "pysted",
-        "torch"
+        "torch",
+        "metrics @ git+ssh://git@github.com/FLClab/metrics.git"
     ]  # And any other dependencies foo needs
 )

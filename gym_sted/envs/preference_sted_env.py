@@ -21,16 +21,17 @@ from .mosted_env import STEDMultiObjectivesEnv
 
 class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     """
-    Creates a `ContextualSTEDMultiObjectivesEnv`
+    Creates a `PreferenceSTEDMultiObjectivesEnv`
+
+    The `PreferenceSTEDMultiObjectivesEnv` is used to create a STED environment with multiple objectives. The reward is calculated using the `PrefNet` model from the `prefnet` module. The model is used to articulate the preferences of the agent. The model is trained on a set of demonstrations and is used to evaluate the objectives.
 
     Action space
         The action space corresponds to the imaging parameters
 
     Observation space
         The observation space is a tuple, where
-        1. The current confocal image
-        2. A vector containing the current articulation, the selected actions, the obtained objectives
-
+        1. The current confocal image, and previous STED image, and previous confocal image
+        2. A vector containing the selected actions, the obtained objectives
     """
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR"]
@@ -39,6 +40,16 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
                     max_episode_steps=30, scale_nanodomain_reward=1.,
                     normalize_observations=True, max_count_rate=20e+6,
                     **kwargs):
+        """
+        Instantiates the `STEDMultiObjectivesEnv`
+
+        :param bleach_sampling: A `str` of the bleach sampling mode; See `BleachSampler` for more information
+        :param actions: A `list` of the available actions
+        :param max_episode_steps: An `int` of the maximum number of steps in an episode
+        :param scale_nanodomain_reward: A `float` of the nanodomain reward scaling factor
+        :param normalize_observations: A `bool` that specifies if the observations should be normalized
+        :param max_count_rate: A `float` of the maximum count rate; Used in supered environments
+        """
 
         self.group = None
         self.max_count_rate = max_count_rate
@@ -68,7 +79,11 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         )
 
     def step(self, action):
+        """
+        Performs a step in the environment
 
+        :param action: A `numpy.ndarray` of the action to take
+        """
         # Action is an array of size self.actions and main_action
         # main action should be in the [0, 1, 2]
         # We manually clip the actions which are out of action space
@@ -134,7 +149,7 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
 
         self.conf_params = None
 
-        # Samples the current samply type 
+        # Samples the current sample type 
         self.group = self.datamap_generator.sample_group()
         self.bleach_sampler.optimizer.set_correction_factor(self.group)
 
@@ -156,6 +171,11 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
         return (self.state.astype(numpy.uint16), numpy.zeros((self.observation_space[1].shape[0],), dtype=numpy.float32)), {}
 
     def _update_datamap(self):
+        """
+        Generates a new datamap
+
+        :returns : A `numpy.ndarray` of the state
+        """        
         datamap = self.datamap_generator(group=self.group)
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
@@ -184,19 +204,17 @@ class PreferenceSTEDMultiObjectivesEnv(STEDMultiObjectivesEnv):
     
 class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectivesEnv):
     """
-    Creates a `PreferenceCountRateScaleSTEDMultiObjectivesEnv`. In this case the 
-    reward is still calculated using the `PrefNet` model with a sigmoid activation 
-    to normalize the scores within [0, 1]. We give negative feedback when the model 
-    selects actions that leads to >1MHz photons in the acquired STED image
+    Creates a `PreferenceCountRateScaleSTEDMultiObjectivesEnv`. 
+    
+    The reward is calculated using the `PrefNet` model. We give a negative feedback when the model selects actions that leads to >20MHz photons in the acquired STED image
 
     Action space
         The action space corresponds to the imaging parameters
 
     Observation space
         The observation space is a tuple, where
-        1. The current confocal image
-        2. A vector containing the current articulation, the selected actions, the obtained objectives
-
+        1. The current confocal image, and previous STED image, and previous confocal image
+        2. A vector containing the confocal power, selected actions, the obtained objectives
     """
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR"]
@@ -205,7 +223,17 @@ class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectiv
                     max_episode_steps=30, scale_nanodomain_reward=1.,
                     normalize_observations=True, max_count_rate=20e+6,
                     negative_reward=-10., **kwargs):
+        """
+        Instantiates the `STEDMultiObjectivesEnv`
 
+        :param bleach_sampling: A `str` of the bleach sampling mode; See `BleachSampler` for more information
+        :param actions: A `list` of the available actions
+        :param max_episode_steps: An `int` of the maximum number of steps in an episode
+        :param scale_nanodomain_reward: A `float` of the nanodomain reward scaling factor
+        :param normalize_observations: A `bool` that specifies if the observations should be normalized
+        :param max_count_rate: A `float` of the maximum count rate; Used in supered environments
+        :param negative_reward: A `float` of the negative reward to give when the count rate is above the threshold
+        """
         super(PreferenceCountRateScaleSTEDMultiObjectivesEnv, self).__init__(
             bleach_sampling = bleach_sampling,
             actions = actions,
@@ -228,7 +256,11 @@ class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectiv
         ))                
 
     def step(self, action):
+        """
+        Performs a step in the environment
 
+        :param action: A `numpy.ndarray` of the action to take
+        """
         # Action is an array of size self.actions and main_action
         # main action should be in the [0, 1, 2]
         # We manually clip the actions which are out of action space
@@ -292,22 +324,22 @@ class PreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectiv
 
 class PreferenceCountRateScaleRewardEngSTEDMultiObjectivesEnv(PreferenceCountRateScaleSTEDMultiObjectivesEnv):
     """
-    Creates a `PreferenceCountRateScaleRewardEngSTEDMultiObjectivesEnv`. In this case the 
-    reward is still calculated using the `PrefNet` model with a sigmoid activation 
-    to normalize the scores within [0, 1]. We give negative feedback when the model 
-    selects actions that leads to >20MHz photons in the acquired STED image.
+    Creates a `PreferenceCountRateScaleRewardEngSTEDMultiObjectivesEnv`.
 
-    An attempt is made at scaling the reward with the parameters. Indeed, the parameters should
-    be as low as possible to prevent too much light reaching the sample
+    The reward is calculated using the `PrefNet` model. We give a negative feedback when the model selects actions that leads to >20MHz photons in the acquired STED image    
+
+    . warning::
+        Experimental environment.
+
+        An attempt is made at scaling the reward with the parameters. Indeed, the parameters should be as low as possible to prevent too much light reaching the sample.
 
     Action space
         The action space corresponds to the imaging parameters
 
     Observation space
         The observation space is a tuple, where
-        1. The current confocal image
-        2. A vector containing the current articulation, the selected actions, the obtained objectives
-
+        1. The current confocal image, and previous STED image, and previous confocal image
+        2. A vector containing the confocal power, selected actions, the obtained objectives
     """
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR"]
@@ -329,7 +361,11 @@ class PreferenceCountRateScaleRewardEngSTEDMultiObjectivesEnv(PreferenceCountRat
         )
 
     def step(self, action):
+        """
+        Performs a step in the environment
 
+        :param action: A `numpy.ndarray` of the action to take
+        """
         # Action is an array of size self.actions and main_action
         # main action should be in the [0, 1, 2]
         # We manually clip the actions which are out of action space
@@ -398,19 +434,17 @@ class PreferenceCountRateScaleRewardEngSTEDMultiObjectivesEnv(PreferenceCountRat
     
 class RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv(PreferenceSTEDMultiObjectivesEnv):
     """
-    Creates a `PreferenceCountRateScaleSTEDMultiObjectivesEnv`. In this case the 
-    reward is still calculated using the `PrefNet` model with a sigmoid activation 
-    to normalize the scores within [0, 1]. We give negative feedback when the model 
-    selects actions that leads to >1MHz photons in the acquired STED image
+    Creates a `RecurrentPreferenceCountRateScaleSTEDMultiObjectivesEnv`. 
+    
+    The reward is calculated using the `PrefNet` model. We give a negative feedback when the model selects actions that leads to >20MHz photons in the acquired STED image. The environment is recurrent and only reveals the current state and action taken.
 
     Action space
         The action space corresponds to the imaging parameters
 
     Observation space
         The observation space is a tuple, where
-        1. The current confocal image
-        2. A vector containing the current articulation, the selected actions, the obtained objectives
-
+        1. The current confocal image, and previous STED image, and previous confocal image
+        2. A vector containing the confocal power, selected actions, the obtained objectives
     """
     metadata = {'render.modes': ['human']}
     obj_names = ["Resolution", "Bleach", "SNR"]
