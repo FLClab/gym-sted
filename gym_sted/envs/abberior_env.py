@@ -31,8 +31,8 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
 
     Observation space
         The observation space is a tuple, where
-        1. The current confocal image
-        2. A vector containing the current articulation, the selected actions, the obtained objectives
+        1. The current confocal image, and previous confocal/STED images
+        2. A vector containing the selected actions, the obtained objectives
 
     """
     metadata = {'render.modes': ['human']}
@@ -57,6 +57,8 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
             dtype=numpy.float32
         )
 
+        # The observation space is a tuple of the current confocal image and the articulation
+        # The shape of the image must match the shape of the acquisition
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2**16, shape=(224, 224, 3), dtype=numpy.uint16),
             spaces.Box(
@@ -101,7 +103,7 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
 
     def step(self, action):
         """
-        Method that should be implemented in the object that inherited
+        Performs a step in the environment
 
         :param action: A `numpy.ndarray` of the action
         """
@@ -155,9 +157,10 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         """
-        Resets the environment with a new datamap
+        Resets the environment with a new state
 
-        :returns : A `numpy.ndarray` of the molecules
+        :returns : The current state of the environment
+                   A `dict` of information
         """
         super().reset(seed=seed)
 
@@ -194,11 +197,18 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         pyplot.show(block=True)
 
     def update_(self, **kwargs):
+        """
+        Updates parameters of the environment in place.
+        """
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     def _update_datamap(self):
+        """
+        Updates the state of the microscope. 
 
+        This corresponds to the acquisition of a new image at a new position. The user is prompted to move the stage to a new position if necessary. The `RegionSelector` is used to keep track of the selected regions by the user.
+        """
         # Sets the next regions to images
         xoff, yoff = next(self.region_selector)
         abberior.microscope.set_offsets(self.measurements["conf"], xoff, yoff)
@@ -212,7 +222,23 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         return state
 
     def _acquire(self, action):
+        """
+        Acquires an image with the given action.
 
+        The sequence of acquisition is as follows:
+        1. Acquire a confocal image
+        2. Acquire a STED image
+        3. Acquire a second confocal image
+        4. Calculate the foreground of the confocal/STED images
+
+        :param action: A `numpy.ndarray` of the action
+
+        :return: A `numpy.ndarray` of the STED image
+                 A `numpy.ndarray` of the first confocal image
+                 A `numpy.ndarray` of the second confocal image
+                 A `numpy.ndarray` of the STED foreground
+                 A `numpy.ndarray` of the confocal foreground
+        """
         # Generates imaging parameters
         sted_params = {
             name : action[self.actions.index(name)]
@@ -264,8 +290,8 @@ class AbberiorSTEDCountRateMultiObjectivesEnv(AbberiorSTEDMultiObjectivesEnv):
 
     Observation space
         The observation space is a tuple, where
-        1. The current confocal image
-        2. A vector containing the current articulation, the selected actions, the obtained objectives
+        1. The current confocal image, and previous confocal/STED images
+        2. A vector containing the the confocal power, the selected actions, the obtained objectives
 
     """
     metadata = {'render.modes': ['human']}
@@ -276,9 +302,17 @@ class AbberiorSTEDCountRateMultiObjectivesEnv(AbberiorSTEDMultiObjectivesEnv):
                     normalize_observations=True,
                     max_count_rate=20e+6, 
                     negative_reward=-10):
+        """
+        Instantiates the `AbberiorSTEDCountRateMultiObjectivesEnv`
 
-        # These are the parameters by default that would
-        # Have been used
+        :param actions: A `list` of the actions
+        :param max_episode_steps: An `int` of the maximum number of steps
+        :param normalize_observations: A `bool` that specifies if the observations should be normalized
+        :param max_count_rate: A `float` of the maximum count rate allowed for a STED acquisition
+        :param negative_reward: A `float` of the negative reward given when the count rate is above the maximum
+        """
+        # These are the parameters by default that were used in the simulated environment
+        # These parameters should be updated to match the real microscope
         self.conf_params = {
             "p_ex" : 9,
             "p_sted" : 0.,
@@ -300,7 +334,7 @@ class AbberiorSTEDCountRateMultiObjectivesEnv(AbberiorSTEDMultiObjectivesEnv):
 
     def step(self, action):
         """
-        Method that should be implemented in the object that inherited
+        Performs a step in the environment
 
         :param action: A `numpy.ndarray` of the action
         """

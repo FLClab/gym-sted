@@ -126,7 +126,7 @@ class MoleculesGenerator():
 
 class MicroscopeGenerator():
     """
-    Generate a Microscope configuration
+    Generate a Microscope
     """
     def __init__(self, **kwargs):
 
@@ -149,6 +149,9 @@ class MicroscopeGenerator():
         self.pixelsize = 20e-9
 
     def generate_microscope(self, **kwargs):
+        """
+        Generates the default microscope
+        """
 
         # Generating objects necessary for acquisition simulation
         laser_ex = base.GaussianBeam(**kwargs.get("laser_ex_params", self.laser_ex_params))
@@ -179,7 +182,9 @@ class MicroscopeGenerator():
         return datamap
 
     def generate_temporal_datamap(self, **kwargs):
-        # jveux tu mettre les params pour créer le tstack ici ou jveux gérer ça direct dans l'env?
+        """
+        Experimental function to generate a temporal datamap
+        """
         temporal_datamap_params = kwargs.get("temporal_datamap", {
             "whole_datamap": kwargs.get("whole_datamap", self.molecules_disposition),
             "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize),
@@ -200,7 +205,9 @@ class MicroscopeGenerator():
         return temporal_datamap
 
     def generate_temporal_datamap_smoother_flash(self, **kwargs):
-        # jveux tu mettre les params pour créer le tstack ici ou jveux gérer ça direct dans l'env?
+        """
+        Experimental function to generate a temporal datamap
+        """
         temporal_datamap_params = kwargs.get("temporal_datamap", {
             "whole_datamap": kwargs.get("whole_datamap", self.molecules_disposition),
             "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize),
@@ -224,6 +231,9 @@ class MicroscopeGenerator():
         return temporal_datamap
 
     def generate_temporal_datamap_sampled_flash(self, **kwargs):
+        """
+        Experimental function to generate a temporal datamap
+        """
         temporal_datamap_params = kwargs.get("temporal_datamap", {
             "whole_datamap": kwargs.get("whole_datamap", self.molecules_disposition),
             "datamap_pixelsize": kwargs.get("datamap_pixelsize", self.pixelsize),
@@ -248,7 +258,9 @@ class MicroscopeGenerator():
         return temporal_datamap
 
     def generate_params(self, **kwargs):
-
+        """
+        Generates the imaging parameters. When no parameters are passed, the default corresponds to a confocal image acquisition.
+        """
         imaging_params = kwargs.get("imaging", {
             "pdt" : defaults.PDT,
             "p_ex" : defaults.P_EX,
@@ -261,6 +273,10 @@ class BleachSampler:
     Creates a `BleachSampler` to sample new bleaching function parameters
 
     :param mode: The sampling mode from {constant, uniform, choice}
+    :param value: A `dict` of the bleach parameters
+    :param routine: A `str` of the routine to load
+    :param seed: An `int` of the seed
+    :param criterions: A `dict` of criterions; To be used with `uniform` mode
     """
     def __init__(self, mode, value=None, routine=None, seed=None, criterions=None):
         self.seed(seed)
@@ -463,6 +479,9 @@ class FluorescenceOptimizer():
         self.microscope.fluo.b = defaults.FLUO["b"]
 
     def set_correction_factor(self, sample):
+        """
+        Sets the correction factor for the sample
+        """
         assert sample in self.FACTORS.keys()
         self.correction_factor = self.FACTORS[sample]
 

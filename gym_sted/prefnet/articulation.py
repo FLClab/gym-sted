@@ -35,7 +35,9 @@ def load_demonstrations(path=None, f1_score=False):
 
 class PreferenceArticulator:
     """
-    Creates a preference articulation model
+    Creates a model that articulates preferences
+
+    The model is a `PrefNet` model that articulates preferences.
     """
     def __init__(self, nb_obj=3, **kwargs):
         model_name = kwargs.get("model_name", "2021-07-12-06-40-29_ResolutionBleachSNR")
@@ -51,6 +53,7 @@ class PreferenceArticulator:
         Articulates the decision from a list of possible choices
 
         :param thetas: A `list` of rewards
+        :param use_sigmoid: A `bool` that specifies if the sigmoid should be used
 
         :returns : An `int` of the optimal choice
                    An `numpy.ndarray` of the scores from low to high

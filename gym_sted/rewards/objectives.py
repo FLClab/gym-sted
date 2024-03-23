@@ -1,6 +1,10 @@
 
 """This module contains classes that implement several objectives to optimize.
-One can define a new objective by inheriting abstract class :class:`Objective`.
+
+It is highly inspired from the `bandit-optimization` library.
+
+.. reference:
+    [banditopt] https://github.com/FLClab/bandit-optimization
 """
 
 from abc import ABC, abstractmethod
@@ -381,14 +385,32 @@ class Squirrel(Objective):
         return gaussian_filter(img * alpha + beta, sigma=sigma)
 
 class NumberNanodomains(Objective):
+    """
+    Objective to optimize the detection of nanodomains.
+
+    The objective is to optimize the detection of nanodomains in STED images. Nanodomains are detected by threshoding the image and then detecting the local maxima. On each maxima, a centroid is computed and the distance to the ground truth is computed. The objective is the F1 score between the detected and the ground truth nanodomains.
+    """
     def __init__(self, threshold=2):
-        # Do I need to inherit from the Objective class? this reward objective seems different from the others
+        """
+        Instantiates the `NumberNanodomains` objective
+
+        :param threshold: A `float` of the threshold to use for the detection. Corresponds to the minimum distance between two nanodomains.
+        """
         self.label = "NbNanodomains"
-        self.select_optimal = None   # not sure what to put here ?????
+        self.select_optimal = None
 
         self.threshold = threshold
 
     def evaluate(self, sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg, *args, **kwargs):
+        """
+        Evaluates the objective
+
+        :param sted_stack: A list of STED images.
+        :param confocal_init: A confocal image acquired before the STED stack.
+        :param concofal_end: A confocal image acquired after the STED stack.
+        :param sted_fg: A background mask of the first STED image in the stack
+        :param confocal_fg: A background mask of the initial confocal image
+        """
         synapse = kwargs.get("synapse")
 
         filtered = filters.gaussian(sted_stack, sigma=0.5)

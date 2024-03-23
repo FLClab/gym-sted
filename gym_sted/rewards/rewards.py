@@ -2,6 +2,9 @@
 import numpy
 
 class RewardCalculator:
+    """
+    Base class for the reward calculator
+    """
     def __init__(self, objs, *args, **kwargs):
         """
         Instantiates the `RewardCalculator`
@@ -27,7 +30,7 @@ class RewardCalculator:
 
     def rescale(self, value, obj_name):
         """
-        Rescales the reward to be within approximately [0, 1] range
+        Rescales the reward to be within ["low", "high"] range
 
         :param value: The value of the objective
         :param obj_name: The name of the objective
@@ -35,6 +38,11 @@ class RewardCalculator:
         return (value - self.scales[obj_name]["low"]) / (self.scales[obj_name]["high"] - self.scales[obj_name]["low"])
 
 class MORewardCalculator(RewardCalculator):
+    """
+    Multi-objective reward calculator
+
+    The `MORewardCalculator` is used to evaluate multiple objectives and returns the rewards as a list of values for each imaging objective.
+    """
     def __init__(self, objs, *args, **kwargs):
         """
         Instantiates the `RewardCalculator`
@@ -46,8 +54,7 @@ class MORewardCalculator(RewardCalculator):
 
     def evaluate(self, sted_image, conf1, conf2, fg_s, fg_c):
         """
-        Evaluates the objectives and returns whether all objectives are within
-        the predefined bounds
+        Evaluates the objectives
 
         :param sted_stack: A `numpy.ndarray` of the acquired STED image
         :param conf1: A `numpy.ndarray` of the acquired confocal image before
@@ -64,8 +71,7 @@ class MORewardCalculator(RewardCalculator):
 
     def evaluate_rescale(self, sted_image, conf1, conf2, fg_s, fg_c):
         """
-        Evaluates the objectives and returns whether all objectives are within
-        the predefined bounds
+        Evaluates the objectives with rescaling
 
         :param sted_stack: A `numpy.ndarray` of the acquired STED image
         :param conf1: A `numpy.ndarray` of the acquired confocal image before
@@ -81,6 +87,11 @@ class MORewardCalculator(RewardCalculator):
         ]
 
 class SumRewardCalculator(RewardCalculator):
+    """
+    Sum reward calculator
+
+    The `SumRewardCalculator` is used to evaluate multiple objectives and returns the sum of the rewards.
+    """
     def __init__(self, objs, *args, **kwargs):
         """
         Instantiates the `RewardCalculator`
@@ -92,8 +103,7 @@ class SumRewardCalculator(RewardCalculator):
 
     def evaluate(self, sted_image, conf1, conf2, fg_s, fg_c):
         """
-        Evaluates the objectives and returns whether all objectives are within
-        the predefined bounds
+        Evaluates the objectives and returns the sum of the rewards
 
         :param sted_stack: A `numpy.ndarray` of the acquired STED image
         :param conf1: A `numpy.ndarray` of the acquired confocal image before
@@ -101,7 +111,7 @@ class SumRewardCalculator(RewardCalculator):
         :param fg_s: A `numpy.ndarray` of the STED foreground
         :param fg_c: A `numpy.ndarray` of the confocal foreground
 
-        :returns : A `list` of rewards
+        :returns : A `float` of the sum of the rewards
         """
         return sum([
             1 - self.rescale(self.objectives[obj_name].evaluate([sted_image], conf1, conf2, fg_s, fg_c), obj_name)
@@ -110,6 +120,11 @@ class SumRewardCalculator(RewardCalculator):
         ])
 
 class MultiplyRewardCalculator(RewardCalculator):
+    """
+    Multiply reward calculator
+
+    The `MultiplyRewardCalculator` is used to evaluate multiple objectives and returns the product of the rewards.
+    """
     def __init__(self, objs, *args, **kwargs):
         """
         Instantiates the `RewardCalculator`
@@ -121,8 +136,7 @@ class MultiplyRewardCalculator(RewardCalculator):
 
     def evaluate(self, sted_image, conf1, conf2, fg_s, fg_c):
         """
-        Evaluates the objectives and returns whether all objectives are within
-        the predefined bounds
+        Evaluates the objectives and returns the product of the rewards
 
         :param sted_stack: A `numpy.ndarray` of the acquired STED image
         :param conf1: A `numpy.ndarray` of the acquired confocal image before
@@ -130,7 +144,7 @@ class MultiplyRewardCalculator(RewardCalculator):
         :param fg_s: A `numpy.ndarray` of the STED foreground
         :param fg_c: A `numpy.ndarray` of the confocal foreground
 
-        :returns : A `list` of rewards
+        :returns : A `float` of the product of the rewards
         """
         return numpy.prod([
             max(0, 1 - self.rescale(self.objectives[obj_name].evaluate([sted_image], conf1, conf2, fg_s, fg_c), obj_name))
@@ -139,6 +153,11 @@ class MultiplyRewardCalculator(RewardCalculator):
         ]).item()
 
 class BoundedRewardCalculator(RewardCalculator):
+    """
+    Bound reward calculator
+
+    The `BoundedRewardCalculator` is used to evaluate multiple objectives and returns whether all objectives are within the predefined bounds.
+    """
     def __init__(self, objs, *args, **kwargs):
         """
         Instantiates the `RewardCalculator`
@@ -179,15 +198,13 @@ class BoundedRewardCalculator(RewardCalculator):
         return self.bounds[obj_name]["low"] < value < self.bounds[obj_name]["high"]
 
 class NanodomainsRewardCalculator(RewardCalculator):
+    """
+    Nano-domains reward calculator
+
+    The `NanodomainsRewardCalculator` is used to evaluate the number of nanodomains that were correctly identified in the STED image.
+    """
     def __init__(self, objs, *args, **kwargs):
         """
-        ***
-        I think this is the only rewards class I want. This will return a vector with the reward values for all 4
-        objectives. I will only use the reward value for Nanodomains identification as the explicit reward signal,
-        and use the 3 other objectives as info in the encoded representation of the Neural Net (or something)
-        ??? How do I know which idx in the returned list corresponds to which objective ???
-        ***
-
         Instantiates the `RewardCalculator`
 
         :param objs: A `dict` of objective
@@ -214,11 +231,3 @@ class NanodomainsRewardCalculator(RewardCalculator):
                 sted_stack, confocal_init, confocal_end, sted_fg, confocal_fg, *args, **kwargs),
                 "NbNanodomains")
 
-    def rescale(self, value, obj_name):
-        """
-        Rescales the reward to be within approximately [0, 1] range
-
-        :param value: The value of the objective
-        :param obj_name: The name of the objective
-        """
-        return (value - self.scales[obj_name]["low"]) / (self.scales[obj_name]["high"] - self.scales[obj_name]["low"])

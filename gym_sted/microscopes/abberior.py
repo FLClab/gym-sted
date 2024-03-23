@@ -8,7 +8,18 @@ from abberior import microscope
 from .general import GeneralMicroscope
 
 class AbberiorConfigurator:
+    """
+    Configuration of an Abberior microscope.
+
+    This class is used to configure the microscope settings for a given measurement.
+    """
     def __init__(self, config, measurements):
+        """
+        Instantiates the `AbberiorConfigurator`
+
+        :param config: A `dict` of configuration options
+        :param measurements: A `dict` of measurement windows
+        """
 
         self.config = config
         self.measurements = measurements
@@ -47,8 +58,15 @@ class AbberiorConfigurator:
             conf, params.get("p_ex", self.config[f"params_{measurement}"]["p_ex"]), laser_id=self.config["laser_id"]["exc"], channel_id=0)
             
 class AbberiorMicroscope(GeneralMicroscope):
+    """
+    Superclass for an Abberior microscope.
+
+    This class implements the `acquire` method to acquire images from an Abberior microscope.
+    """
     def __init__(self, measurements, config=None):
         """
+        Instantiates the `AbberiorMicroscope`
+
         :param measurements: A `dict` of measurement windows
         :param config: A `dict` of configuration options
         """
@@ -64,7 +82,14 @@ class AbberiorMicroscope(GeneralMicroscope):
         self.configurator.initialize()
 
     def acquire(self, measurement, params=None):
+        """
+        Acquires an image from the microscope.
 
+        :param measurement: A `str` of the required measurement
+        :param params: A `dict` of parameters
+
+        :return: A `numpy.ndarray` of the acquired image
+        """
         if isinstance(params, dict):
             self.configurator.set_params(measurement, params)
 

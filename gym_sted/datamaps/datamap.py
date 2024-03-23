@@ -8,18 +8,26 @@ from collections import defaultdict
 
 class DatamapGenerator:
     """
-    Creates a `DatamapGenerator` that allows to create a datamap with a variable
-    number of fluorescent molecules in each sources
+    Creates a `DatamapGenerator` that allows to create a datamap
+
+    Only one mode is available:
+    - `real`: Samples from real datamaps
     """
     def __init__(
         self, mode="real", shape=(224, 224),
-        molecules=(10, 100), random_state=None, path=None,
-        molecules_scale=0.1, augment=False
+        molecules=(10, 100), molecules_scale=0.1, random_state=None, 
+        path=None, augment=False
     ):
         """
         Instantiates the `DatamapGenerator`
 
-        :param is_variable: A `bool` wheter the number of molecules should be sampled
+        :param mode: A `str` that specifies the mode of the datamap generator
+        :param shape: A `tuple` of the shape of the datamap
+        :param molecules: An `int` or a `tuple` of the number of molecules to sample
+        :param molecules_scale: A `float` of the standard deviation of the number of molecules
+        :param random_state: An `int` that sets the random state
+        :param path: A `str` to the folder where the datamaps are stored
+        :param augment: A `bool` that specifies if the datamap should be augmented
         """
         self.mode = mode
         assert self.mode in ["real"]
@@ -81,6 +89,9 @@ class DatamapGenerator:
         experiments by a U-Net.
 
         :param molecules: An `int` of the average number of molecules to samples
+        :param group: A `str` of the group to sample from
+
+        :return: A `numpy.ndarray` of the datamap
         """
         idx = kwargs.get("idx", None)
         if isinstance(idx, int):

@@ -21,13 +21,15 @@ class STEDMultiObjectivesEnv(gym.Env):
     """
     Creates a `STEDMultiObjectivesEnv`
 
+    This is the base class for the STED environment. It is used to create a STED environment with multiple objectives.
+
     Action space
         The action space corresponds to the imaging parameters
 
     Observation space
         The observation space is a tuple, where
-        1. The current confocal image
-        2. A vector containing the current articulation, the selected actions, the obtained objectives
+        1. The current confocal image, and previous STED image, and previous confocal image
+        2. A vector containing the selected actions, the obtained objectives
 
     """
     metadata = {'render.modes': ['human']}
@@ -36,6 +38,15 @@ class STEDMultiObjectivesEnv(gym.Env):
     def __init__(self, bleach_sampling="constant", actions=["p_sted"],
                     max_episode_steps=10, scale_nanodomain_reward=1.,
                     normalize_observations=True, **kwargs):
+        """
+        Instantiates the `STEDMultiObjectivesEnv`
+
+        :param bleach_sampling: A `str` of the bleach sampling mode; See `BleachSampler` for more information
+        :param actions: A `list` of the available actions
+        :param max_episode_steps: An `int` of the maximum number of steps in an episode
+        :param scale_nanodomain_reward: A `float` of the nanodomain reward scaling factor
+        :param normalize_observations: A `bool` that specifies if the observations should be normalized
+        """
 
         self.actions = actions
         self.action_space = spaces.Box(
@@ -148,10 +159,18 @@ class STEDMultiObjectivesEnv(gym.Env):
         pyplot.show(block=True)
 
     def update_(self, **kwargs):
+        """
+        Updates parameters of the environment in place.
+        """        
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     def _update_datamap(self):
+        """
+        Generates a new datamap
+
+        :returns : A `numpy.ndarray` of the state
+        """
         self.synapse = self.synapse_generator(rotate=True)
         self.datamap = self.microscope_generator.generate_datamap(
             datamap = {
@@ -168,7 +187,27 @@ class STEDMultiObjectivesEnv(gym.Env):
         return state
 
     def _acquire(self, action):
+        """
+        Acquires an image with the given action.
 
+        The sequence of acquisition is as follows:
+        1. Acquire a confocal image
+        2. Acquire a STED image
+        3. Acquire a second confocal image
+        4. Calculate the foreground of the confocal/STED images
+
+        :param action: A `numpy.ndarray` of the action
+
+
+        :param action: A `numpy.ndarray` of the action
+
+        :return: A `numpy.ndarray` of the STED image
+                 A `numpy.ndarray` of the bleached image
+                 A `numpy.ndarray` of the first confocal image
+                 A `numpy.ndarray` of the second confocal image
+                 A `numpy.ndarray` of the STED foreground
+                 A `numpy.ndarray` of the confocal foreground        
+        """
         # Generates imaging parameters
         sted_params = self.microscope_generator.generate_params(
             imaging = {
@@ -207,4 +246,7 @@ class STEDMultiObjectivesEnv(gym.Env):
         return sted_image, bleached["base"][self.datamap.roi], conf1, conf2, fg_s, fg_c
 
     def close(self):
+        """
+        Close the environment
+        """
         return None
