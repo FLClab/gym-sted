@@ -16,5 +16,8 @@ setup(
         "pysted",
         "torch",
         "metrics @ git+ssh://git@github.com/FLClab/metrics.git"
-    ]  # And any other dependencies foo needs
+    ],  # And any other dependencies foo needs
+    extras_require={
+        "abberior": ["abberior-sted"],
+    },
 )
