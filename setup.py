@@ -15,7 +15,7 @@ setup(
         "matplotlib",
         "pysted",
         "torch",
-        "metrics @ git+ssh://git@github.com/FLClab/metrics.git"
+        "metrics @ git+https://github.com/FLClab/metrics.git"
     ],  # And any other dependencies foo needs
     extras_require={
         "abberior": ["abberior-sted"],
