@@ -322,7 +322,7 @@ class AbberiorSTEDCountRateMultiObjectivesEnv(AbberiorSTEDMultiObjectivesEnv):
         self.negative_reward = negative_reward
         self.max_count_rate = max_count_rate
 
-        super().__init__(self, actions, max_episode_steps, normalize_observations)
+        super(AbberiorSTEDCountRateMultiObjectivesEnv, self).__init__(actions, max_episode_steps, normalize_observations)
 
         self.observation_space = spaces.Tuple((
             spaces.Box(0, 2**16, shape=(224, 224, 3), dtype=numpy.uint16),
@@ -350,7 +350,7 @@ class AbberiorSTEDCountRateMultiObjectivesEnv(AbberiorSTEDMultiObjectivesEnv):
 
         # Reward is given by the objectives
         reward, _, _ = self.preference_articulation.articulate(
-            [mo_objs], use_sigmod=False
+            [mo_objs]
         )
         reward = reward.item()
 

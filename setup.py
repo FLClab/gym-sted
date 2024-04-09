@@ -8,6 +8,7 @@ setup(
     packages=setuptools.find_packages(where="."),
     install_requires=[
         "gym>=0.26",
+        "h5py",
         "scikit-learn",
         "scikit-image",
         "numpy",

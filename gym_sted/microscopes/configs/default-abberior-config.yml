@@ -1,6 +1,6 @@
 laser_id:
-  exc: 4
-  sted: 5
+  exc: 5
+  sted: 6
 params_conf:
   p_ex: 5.
   p_sted: 0.
