@@ -24,6 +24,23 @@ class AbberiorConfigurator:
         self.config = config
         self.measurements = measurements
 
+    def get_laser_id(self, measurement_name):
+        """
+        Returns the laser id for a given measurement.
+
+        :param measurement_name: A `str` of the measurement name
+
+        :return: A `dict` of laser ids
+        """
+        if self.config.get("laser_id", None) is None:
+            exc_laser_id = self.config[f"params_{measurement_name}"]["exc_laser_id"]
+            sted_laser_id = self.config[f"params_{measurement_name}"]["sted_laser_id"]
+        else:
+            exc_laser_id = self.config["laser_id"]["exc"]
+            sted_laser_id = self.config["laser_id"]["sted"]
+
+        return {"exc": exc_laser_id, "sted": sted_laser_id}
+
     def initialize(self):
         """
         Sets the defaults value of the microscope
@@ -34,12 +51,13 @@ class AbberiorConfigurator:
             microscope.set_pixelsize(
                 conf, *self.config["image_opts"]["pixelsize"])
             
+            laser_id = self.get_laser_id(key)
             microscope.set_dwelltime(
                 conf, self.config[f"params_{key}"]["pdt"])
             microscope.set_power(
-                conf, self.config[f"params_{key}"]["p_sted"], laser_id=self.config["laser_id"]["sted"], channel_id=0)
+                conf, self.config[f"params_{key}"]["p_sted"], laser_id=laser_id["sted"], channel_id=0)
             microscope.set_power(
-                conf, self.config[f"params_{key}"]["p_ex"], laser_id=self.config["laser_id"]["exc"], channel_id=0)
+                conf, self.config[f"params_{key}"]["p_ex"], laser_id=laser_id["exc"], channel_id=0)
         
     def set_params(self, measurement, params):
         """
@@ -50,12 +68,14 @@ class AbberiorConfigurator:
         """
         conf = self.measurements[measurement]
 
+        laser_id = self.get_laser_id(measurement)
+
         microscope.set_dwelltime(
             conf, params.get("pdt", self.config[f"params_{measurement}"]["pdt"]))
         microscope.set_power(
-            conf, params.get("p_sted", self.config[f"params_{measurement}"]["p_sted"]), laser_id=self.config["laser_id"]["sted"], channel_id=0)
+            conf, params.get("p_sted", self.config[f"params_{measurement}"]["p_sted"]), laser_id=laser_id["sted"], channel_id=0)
         microscope.set_power(
-            conf, params.get("p_ex", self.config[f"params_{measurement}"]["p_ex"]), laser_id=self.config["laser_id"]["exc"], channel_id=0)
+            conf, params.get("p_ex", self.config[f"params_{measurement}"]["p_ex"]), laser_id=laser_id["exc"], channel_id=0)
             
 class AbberiorMicroscope(GeneralMicroscope):
     """

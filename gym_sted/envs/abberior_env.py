@@ -4,11 +4,12 @@ import numpy
 import random
 import os
 import abberior
+import yaml
 
 from gym import error, spaces, utils
 from gym.utils import seeding
 from matplotlib import pyplot
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 import gym_sted
 from gym_sted import rewards, defaults
@@ -99,7 +100,13 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         self.action_normalizer = Normalizer(self.actions, self.default_action_space)
         self.obj_normalizer = Normalizer(self.obj_names, scales_dict)
 
-        self.region_selector = RegionSelector(self.config_overview)
+        self.region_selector = RegionSelector(
+            self.config_overview, {
+                "region_opts" : {
+                    "mode" : "manual",
+                    "overview" : "640"
+                }
+            })
 
     def step(self, action):
         """
@@ -220,6 +227,9 @@ class AbberiorSTEDMultiObjectivesEnv(gym.Env):
         state = self.microscope.acquire("conf")
 
         return state
+
+    def acquire(self, action):
+        return self._acquire(action)
 
     def _acquire(self, action):
         """
@@ -395,3 +405,169 @@ class AbberiorSTEDCountRateMultiObjectivesEnv(AbberiorSTEDMultiObjectivesEnv):
         self.state = numpy.stack((state, conf1, sted_image), axis=-1)
 
         return (self.state.astype(numpy.uint16), obs.astype(numpy.float32)), reward, done, False, info
+
+class MetaEnv:
+    
+    def __init__(self, envs):
+
+        self.envs = envs
+        self.action_space = spaces.Tuple([env.action_space for env in envs])
+        self.observation_space = spaces.Tuple([env.observation_space for env in envs])
+
+        self.max_episode_steps = max([env.spec.max_episode_steps for env in envs])
+        self.current_step = 0
+        self.episode_memory = {
+            "actions" : [],
+            "mo_objs" : [],
+            "reward" : [],
+        }
+
+        self.state = None
+        self.viewer = None
+
+        self.config_overview = abberior.microscope.get_config("Setting overview configuration.")
+        self.config_focus = abberior.microscope.get_config("Setting FOCUS configuration.")
+        self.region_selector = RegionSelector(
+            self.config_overview,
+            {
+                "region_opts" : {
+                    "mode" : "random",
+                    "overview" : "640"
+                }
+            }
+        )
+
+    def step(self, actions):
+        """
+        Performs a step in the environment
+
+        :param action: A `numpy.ndarray` of the action
+        """
+
+        # Action is an array of size self.actions and main_action
+        # main action should be in the [0, 1, 2]
+        # We manually clip the actions which are out of action space
+        actions = [numpy.clip(action, env.action_space.low, env.action_space.high) for action, env in zip(actions, self.envs)]
+
+        # Acquire an image with the given parameters
+        sted_images = []
+        conf1s = []
+        conf2s = []
+        fg_ss = []
+        fg_cs = []
+        mo_objs = []
+        rewards = []
+        for action, env in zip(actions, self.envs):
+            sted_image, conf1, conf2, fg_s, fg_c = env.acquire(action)
+            sted_images.append(sted_image)
+            conf1s.append(conf1)
+            conf2s.append(conf2)
+            fg_ss.append(fg_s)
+            fg_cs.append(fg_c)
+
+            mo_obj = env.mo_reward_calculator.evaluate(sted_image, conf1, conf2, fg_s, fg_c)
+            mo_objs.append(mo_obj)
+
+            reward, _, _ = env.preference_articulation.articulate(
+                [mo_obj]
+            )
+            rewards.append(reward.item())
+
+        # Updates memory
+        done = self.current_step >= self.max_episode_steps - 1
+        self.current_step += 1
+        self.episode_memory["mo_objs"].append(mo_objs)
+        self.episode_memory["actions"].append(actions)
+        self.episode_memory["reward"].append(rewards)
+        info = {
+            "actions" : actions,
+            "sted_images" : sted_images,
+            "conf1s" : conf1s,
+            "conf2s" : conf2s,
+            "fg_cs" : fg_cs,
+            "fg_ss" : fg_ss,
+            "mo_objs" : mo_objs,
+            "rewards" : rewards,
+        }
+
+        # Build the observation space
+        obs_per_env = []
+        for env in self.envs:
+            conf_params = env.microscope.config["params_conf"]
+            obs = [conf_params["p_ex"] / env.conf_params["p_ex"]]
+            for actions, mos in zip(self.episode_memory["actions"], self.episode_memory["mo_objs"]):
+                a = actions[self.envs.index(env)]
+                mo = mos[self.envs.index(env)]
+
+                obs.extend(env.action_normalizer(a) if env.normalize_observations else a)
+                obs.extend(env.obj_normalizer(mo) if env.normalize_observations else mo)
+
+            obs = numpy.pad(numpy.array(obs), (0, env.observation_space[1].shape[0] - len(obs)))
+            obs_per_env.append(obs)
+        
+        states = self._update_datamap(envs=self.envs)
+        state_per_env = []
+        for state, conf1, sted_image in zip(states, conf1s, sted_images):
+            stack = numpy.stack((state, conf1, sted_image), axis=-1)
+            stack = stack / 2**10 # This is the normalization used in the original code
+            state_per_env.append(stack)
+        
+        return (state_per_env, obs_per_env), rewards, done, False, info
+
+    def reset(self, seed=None, options=None):
+        """
+        Resets the environment with a new state
+
+        :returns : The current state of the environment
+                   A `dict` of information
+        """
+
+        self.current_step = 0
+        self.episode_memory = {
+            "actions" : [],
+            "mo_objs" : [],
+            "reward" : [],
+        }
+
+        states = self._update_datamap(envs=self.envs)
+        state_per_env = []
+        for state in states:
+            stack = numpy.stack((state, numpy.zeros_like(state), numpy.zeros_like(state)), axis=-1)
+            stack = stack / 2**10 # This is the normalization used in the original code
+            state_per_env.append(stack)
+        return (state_per_env, [numpy.zeros((env.observation_space[1].shape[0],), dtype=numpy.float32) for env in self.envs])
+
+    def get_state(self):
+        """
+        Returns a `dict` of the state of the `env`
+        """
+        states = defaultdict(list)
+        for env in self.envs:
+            state = env.get_state()
+            for key, value in state.items():
+                states[key].append(value)
+        return states
+
+    def close(self):
+        return None
+
+    def _update_datamap(self, envs):
+        """
+        Updates the state of the microscope. 
+
+        This corresponds to the acquisition of a new image at a new position. The user is prompted to move the stage to a new position if necessary. The `RegionSelector` is used to keep track of the selected regions by the user.
+        """
+        # Sets the next regions to images
+        xoff, yoff = next(self.region_selector)
+
+        abberior.microscope.set_offsets(self.config_focus, xoff, yoff)
+        input("Now is a good time to move focus. Press enter when done.")
+
+        states = []
+        for env in envs:
+            abberior.microscope.set_offsets(env.measurements["conf"], xoff, yoff)
+            abberior.microscope.set_offsets(env.measurements["sted"], xoff, yoff)
+        
+            state = env.microscope.acquire("conf")
+            states.append(state)
+        return states
