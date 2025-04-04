@@ -64,10 +64,14 @@ This is similar to the `AbberiorMOSTED-v0` environment. However, the count rate 
 If you use `gym-sted` please cite the following papers
 
 ```bibtex
-@misc{turcotte2021pysted,
-  title = {pySTED : A STED Microscopy Simulation Tool for Machine Learning Training},
-  author = {Turcotte, Benoit and Bilodeau, Anthony and Lavoie-Cardinal, Flavie and Durand, Audrey},
-  year = {2021},
-  note = {Accepted to AAAI 2021}
+@article{bilodeau2024development,
+  title={Development of AI-assisted microscopy frameworks through realistic simulation with pySTED},
+  author={Bilodeau, Anthony and Michaud-Gagnon, Albert and Chabbert, Julia and Turcotte, Benoit and Heine, J{\"o}rn and Durand, Audrey and Lavoie-Cardinal, Flavie},
+  journal={Nature Machine Intelligence},
+  volume={6},
+  number={10},
+  pages={1197--1215},
+  year={2024},
+  publisher={Nature Publishing Group UK London}
 }
 ```
